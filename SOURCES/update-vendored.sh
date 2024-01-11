@@ -7,20 +7,23 @@ CENTOS=""
 pwd | grep /tmp/centos > /dev/null
 if [ $? == 0 ]; then
   CENTOS=1
+  PKG=centpkg
+else
+  PKG=rhpkg
 fi
 set -e
 for P in podman skopeo buildah; do
   BRN=`pwd | sed 's,^.*/,,'`
   rm -rf $P
-  pkg clone $P
+  $PKG clone $P
   cd $P
-  [ -z "$CENTOS" ] && pkg switch-branch $BRN
+  $PKG switch-branch $BRN
   if [ $BRN != stream-container-tools-rhel8 ]; then
-    pkg prep
+    $PKG prep
   else
-    pkg --release rhel-8 prep
+    $PKG --release rhel-8 prep
   fi
-  DIR=`ls -d -- */ | grep -v ^tests | head -n1`
+  DIR=`ls -d -- */ | grep "^$P"`
   grep github.com/containers/image $DIR/go.mod | cut -d\  -f2 | sed 's,-.*,,'>> /tmp/ver_image
   grep github.com/containers/common $DIR/go.mod | cut -d\  -f2 | sed 's,-.*,,' >> /tmp/ver_common
   grep github.com/containers/storage $DIR/go.mod | cut -d\  -f2 | sed 's,-.*,,' >> /tmp/ver_storage

@@ -9,11 +9,12 @@ Container engines like Podman & Buildah read containers.conf file, if it exists
 and modify the defaults for running containers on the host. containers.conf uses
 a TOML format that can be easily modified and versioned.
 
-Container engines read the /usr/share/containers/containers.conf and
-/etc/containers/containers.conf, and /etc/containers/containers.conf.d/*.conf files
-if they exist. When running in rootless mode, they also read
-$HOME/.config/containers/containers.conf and
-$HOME/.config/containers/containers.conf.d/*.conf files.
+Container engines read the __/usr/share/containers/containers.conf__,
+__/etc/containers/containers.conf__, and __/etc/containers/containers.conf.d/\*.conf__
+files if they exist.
+When running in rootless mode, they also read
+__$HOME/.config/containers/containers.conf__ and
+__$HOME/.config/containers/containers.conf.d/\*.conf__ files.
 
 Fields specified in containers conf override the default options, as well as
 options in previously read containers.conf files.
@@ -22,10 +23,10 @@ Config files in the `.d` directories, are added in alpha numeric sorted order an
 
 Not all options are supported in all container engines.
 
-Note container engines also use other configuration files for configuring the environment.
+Note, container engines also use other configuration files for configuring the environment.
 
 * `storage.conf` for configuration of container and images storage.
-* `registries.conf` for definition of container registires to search while pulling.
+* `registries.conf` for definition of container registries to search while pulling.
 container images.
 * `policy.conf` for controlling which images can be pulled to the system.
 
@@ -50,6 +51,7 @@ TOML can be simplified to:
 The containers table contains settings to configure and manage the OCI runtime.
 
 **annotations** = []
+
 List of annotations. Specified as "key=value" pairs to be added to all containers.
 
 Example: "run.oci.keep_original_groups=1"
@@ -65,6 +67,12 @@ The hosts entries from the base hosts file are added to the containers hosts
 file. This must be either an absolute path or as special values "image" which
 uses the hosts file from the container image or "none" which means
 no base hosts file is used. The default is "" which will use /etc/hosts.
+
+**cgroup_conf**=[]
+
+List of cgroup_conf entries specifying a list of cgroup files to write to and
+their values. For example `memory.high=1073741824` sets the
+memory.high limit to 1GB.
 
 **cgroups**="enabled"
 
@@ -98,12 +106,12 @@ default_capabilities = [
       "SETGID",
       "SETPCAP",
       "SETUID",
+      "SYS_CHROOT",
 ]
 ```
 
 Note, by default container engines using containers.conf, run with less
-capabilities than Docker. Docker runs additionally with "AUDIT_WRITE", "MKNOD",
-"NET_RAW", "CHROOT". If you need to add one of these capabilities for a
+capabilities than Docker. Docker runs additionally with "AUDIT_WRITE", "MKNOD" and "NET_RAW". If you need to add one of these capabilities for a
 particular container, you can use the --cap-add option or edit your system's containers.conf.
 
 **default_sysctls**=[]
@@ -199,6 +207,13 @@ the container.
 
 Indicates whether the container engine uses MAC(SELinux) container separation via labeling. This option is ignored on disabled systems.
 
+**label_users**=false
+
+label_users indicates whether to enforce confined users in containers on
+SELinux systems. This option causes containers to maintain the current user
+and role field of the calling process. By default SELinux containers run with
+the user system_u, and the role system_r.
+
 **log_driver**=""
 
 Logging driver for the container. Currently available options are k8s-file, journald, none and passthrough, with json-file aliased to k8s-file for scripting compatibility.  The journald driver is used by default if the systemd journal is readable and writable.  Otherwise, the k8s-file driver is used.
@@ -226,6 +241,10 @@ Options are:
 
 Create /etc/hosts for the container. By default, container engines manage
 /etc/hosts, automatically adding  the container's  own  IP  address.
+
+**oom_score_adj**=0
+
+Tune the host's OOM preferences for containers (accepts values from -1000 to 1000).
 
 **pidns**="private"
 
@@ -324,6 +343,20 @@ cni_plugin_dirs = [
 ]
 ```
 
+**netavark_plugin_dirs**=[]
+
+List of directories that will be searched for netavark plugins.
+
+The default list is:
+```
+netavark_plugin_dirs = [
+  "/usr/local/libexec/netavark",
+  "/usr/libexec/netavark",
+  "/usr/local/lib/netavark",
+  "/usr/lib/netavark",
+]
+```
+
 **default_network**="podman"
 
 The network name of the default network to attach pods to.
@@ -352,11 +385,16 @@ default_subnet_pools = [
 ]
 ```
 
+**default_rootless_network_cmd**="slirp4netns"
+
+Configure which rootless network program to use by default. Valid options are
+`slirp4netns` (default) and `pasta`.
+
 **network_config_dir**="/etc/cni/net.d/"
 
 Path to the directory where network configuration files are located.
-For the CNI backend the default is "/etc/cni/net.d" as root
-and "$HOME/.config/cni/net.d" as rootless.
+For the CNI backend the default is __/etc/cni/net.d__ as root
+and __$HOME/.config/cni/net.d__ as rootless.
 For the netavark backend "/etc/containers/networks" is used as root
 and "$graphroot/networks" as rootless.
 
@@ -366,6 +404,11 @@ Port to use for dns forwarding daemon with netavark in rootful bridge
 mode and dns enabled.
 Using an alternate port might be useful if other dns services should
 run on the machine.
+
+**pasta_options** = []
+
+A list of default pasta options that should be used running pasta.
+It accepts the pasta cli options, see pasta(1) for the full list of options.
 
 ## ENGINE TABLE
 The `engine` table contains configuration options used to set up container engines such as Podman and Buildah.
@@ -403,6 +446,12 @@ conmon_path=[
 ]
 ```
 
+**database_backend**="boltdb"
+
+The database backend of Podman.  Supported values are "boltdb" (default) and
+"sqlite". Please run `podman-system-reset` prior to changing the database
+backend of an existing deployment, to make sure Podman can operate correctly.
+
 **detach_keys**="ctrl-p,ctrl-q"
 
 Keys sequence used for detaching a container.
@@ -410,6 +459,7 @@ Specify the keys sequence used to detach a container.
 Format is a single character `[a-Z]` or a comma separated sequence of
 `ctrl-<value>`, where `<value>` is one of:
 `a-z`, `@`, `^`, `[`, `\`, `]`, `^` or `_`
+Specifying "" disables this feature.
 
 **enable_port_reservation**=true
 
@@ -462,12 +512,14 @@ with detailed information about the container.  Set to false by default.
 A is a list of directories which are used to search for helper binaries.
 
 The default paths on Linux are:
+
 - `/usr/local/libexec/podman`
 - `/usr/local/lib/podman`
 - `/usr/libexec/podman`
 - `/usr/lib/podman`
 
 The default paths on macOS are:
+
 - `/usr/local/opt/podman/libexec`
 -	`/opt/homebrew/bin`
 -	`/opt/homebrew/opt/podman/libexec`
@@ -478,6 +530,7 @@ The default paths on macOS are:
 -	`/usr/lib/podman`
 
 The default path on Windows is:
+
 - `C:\Program Files\RedHat\Podman`
 
 **hooks_dir**=["/etc/containers/oci/hooks.d", ...]
@@ -502,7 +555,7 @@ Not setting this field will fall back to containers/image defaults. (6)
 
 **image_volume_mode**="bind"
 
-Tells container engines how to handle the builtin image volumes.
+Tells container engines how to handle the built-in image volumes.
 
 * bind: An anonymous named volume will be  created  and  mounted into the container.
 * tmpfs: The volume is mounted onto the container as a tmpfs, which allows the users to create content that disappears when the container is stopped.
@@ -512,17 +565,21 @@ Tells container engines how to handle the builtin image volumes.
 
 Infra (pause) container image command for pod infra containers. When running a
 pod, we start a `/pause` process in a container to hold open the namespaces
-associated with the pod. This container does nothing other then sleep,
-reserving the pods resources for the lifetime of the pod.
+associated with the pod. This container does nothing other than sleep,
+reserving the pod's resources for the lifetime of the pod.
 
 **infra_image**=""
 
 Infra (pause) container image for pod infra containers. When running a
 pod, we start a `pause` process in a container to hold open the namespaces
-associated with the pod. This container does nothing other then sleep,
-reserving the pods resources for the lifetime of the pod. By default container
-engines run a builtin container using the pause executable. If you want override
+associated with the pod. This container does nothing other than sleep,
+reserving the pod's resources for the lifetime of the pod. By default container
+engines run a built-in container using the pause executable. If you want override
 specify an image to pull.
+
+**kube_generate_type**="pod"
+
+Default Kubernetes kind/specification of the kubernetes yaml generated with the `podman kube generate` command. The possible options are `pod` and `deployment`.
 
 **lock_type**="shm"
 
@@ -595,6 +652,7 @@ Pull image before running or creating a container. The default is **missing**.
 - **never**: do not pull the image from the registry, use only the local version. Raise an error if the image is not present locally.
 
 **remote** = false
+
 Indicates whether the application should be running in remote mode. This flag modifies the
 --remote option on container engines. Setting the flag to true will default `podman --remote=true` for access to the remote Podman service.
 
@@ -661,14 +719,21 @@ not be by other drivers.
 Determines whether file copied into a container will have changed ownership to
 the primary uid/gid of the container.
 
-**compression_format**=""
+**compression_format**="gzip"
 
 Specifies the compression format to use when pushing an image. Supported values are: `gzip`, `zstd` and `zstd:chunked`.
 
-## SERVICE DESTINATION TABLE
-The `service_destinations` table contains configuration options used to set up remote connections to the podman service for the podman API.
+**compression_level**="5"
 
-**[service_destinations.{name}]**
+The compression level to use when pushing an image. Valid options
+depend on the compression format used. For gzip, valid options are
+1-9, with a default of 5. For zstd, valid options are 1-20, with a
+default of 3.
+
+## SERVICE DESTINATION TABLE
+The `engine.service_destinations` table contains configuration options used to set up remote connections to the podman service for the podman API.
+
+**[engine.service_destinations.{name}]**
 URI to access the Podman service
 **uri="ssh://user@production.example.com/run/user/1001/podman/podman.sock"**
 
@@ -745,29 +810,45 @@ Environment variables like $HOME as well as complete paths are supported for
 the source and destination. An optional third field `:ro` can be used to
 tell the container engines to mount the volume readonly.
 
-On Mac, the default volumes are: `"/Users:/Users", "/private:/private", "/var/folders:/var/folders"`
+On Mac, the default volumes are:
+
+   [ "/Users:/Users", "/private:/private", "/var/folders:/var/folders" ]
+
+**provider**=""
+
+Virtualization provider to be used for running a podman-machine VM. Empty value
+is interpreted as the default provider for the current host OS. On Linux/Mac
+default is `QEMU` and on Windows it is `WSL`.
 
 # FILES
 
 **containers.conf**
 
-Distributions often provide a `/usr/share/containers/containers.conf` file to
-define default container configuration. Administrators can override fields in
-this file by creating `/etc/containers/containers.conf` to specify their own
-configuration. Rootless users can further override fields in the config by
-creating a config file stored in the `$HOME/.config/containers/containers.conf` file.
+Distributions often provide a __/usr/share/containers/containers.conf__ file to
+provide a default configuration. Administrators can override fields in this
+file by creating __/etc/containers/containers.conf__ to specify their own
+configuration. They may also drop `.conf` files in
+__/etc/containers/containers.conf.d__ which will be loaded in alphanumeric order.
+Rootless users can further override fields in the config by creating a config
+file stored in the __$HOME/.config/containers/containers.conf__ file or __.conf__ files in __$HOME/.config/containers/containers.conf.d__.
 
-If the `CONTAINERS_CONF` path environment variable is set, just
-this path will be used. This is primarily used for testing.
+If the `CONTAINERS_CONF` environment variable is set, all system and user
+config files are ignored and only the specified config file will be loaded.
 
-Fields specified in the containers.conf file override the default options, as
-well as options in previously read containers.conf files.
+If the `CONTAINERS_CONF_OVERRIDE` path environment variable is set, the config
+file will be loaded last even when `CONTAINERS_CONF` is set.
+
+The values of both environment variables may be absolute or relative paths, for
+instance, `CONTAINERS_CONF=/tmp/my_containers.conf`.
+
+Fields specified in a containers.conf file override the default options, as
+well as options in previously loaded containers.conf files.
 
 **storage.conf**
 
 The `/etc/containers/storage.conf` file is the default storage configuration file.
 Rootless users can override fields in the storage config by creating
-`$HOME/.config/containers/storage.conf`.
+__$HOME/.config/containers/storage.conf__.
 
 If the `CONTAINERS_STORAGE_CONF` path environment variable is set, this path
 is used for the storage.conf file rather than the default.

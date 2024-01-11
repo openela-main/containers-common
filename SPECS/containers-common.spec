@@ -4,15 +4,15 @@
 # pick the oldest version on c/image, c/common, c/storage vendored in
 # podman/skopeo/podman.
 %global skopeo_branch main
-%global image_branch v5.24.1
-%global common_branch v0.51.0
-%global storage_branch v1.45.3
+%global image_branch v5.26.1
+%global common_branch v0.55.1
+%global storage_branch v1.48.0
 %global shortnames_branch main
 
 Epoch: 2
 Name: containers-common
 Version: 1
-Release: 52%{?dist}
+Release: 55%{?dist}
 Summary: Common configuration and documentation for containers
 License: ASL 2.0
 ExclusiveArch: %{go_arches}
@@ -173,13 +173,25 @@ EOF
 %{_datadir}/rhel/secrets/*
 
 %changelog
-* Wed Apr 05 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-52
-- fix shortnames contained UBI9 links pointing to auth-only registries
-- Resolves: #2182314
+* Wed Jul 19 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-55
+- fix vendoring script
+- Related: #2176063
 
-* Fri Mar 31 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-51
-- update vendored components and configuration files
-- Resolves: #2182492
+* Mon Jul 10 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-54
+- update vendored components
+- Related: #2176063
+
+* Tue Jun 20 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-53
+- rebuild
+- Resolves: #2178263
+
+* Fri Apr 21 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-52
+- update vendored components
+- Related: #2176063
+
+* Fri Mar 24 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-51
+- regenerate shortnames, vendored components + fix pyxis script
+- Related: #2176063
 
 * Wed Feb 22 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-50
 - improve shortnames generation
