@@ -4,15 +4,15 @@
 # pick the oldest version on c/image, c/common, c/storage vendored in
 # podman/skopeo/podman.
 %global skopeo_branch main
-%global image_branch v5.24.1
-%global common_branch v0.51.0
-%global storage_branch v1.45.3
+%global image_branch v5.26.2
+%global common_branch v0.55.4
+%global storage_branch v1.48.1
 %global shortnames_branch main
 
 Epoch: 2
 Name: containers-common
 Version: 1
-Release: 64%{?dist}
+Release: 71%{?dist}
 Summary: Common configuration and documentation for containers
 License: ASL 2.0
 # arch limitation because of go-md2man (missing on i686)
@@ -175,65 +175,33 @@ EOF
 %{_datadir}/rhel/secrets/*
 
 %changelog
-* Wed Apr 05 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-64
-- be sure SYS_CHROOT is in containers.conf + update vendored components
-- Resolves: #2183667
-
-* Tue Mar 21 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-63
+* Fri Jan 19 2024 Jindrich Novy <jnovy@redhat.com> - 2:1-71
 - update vendored components and configuration files
-- Resolves: #2180125
+- Resolves: RHEL-20910
 
-* Wed Feb 22 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-62
+* Mon Oct 09 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-70
+- bump version to preserve upgrade path
+- Resolves: Jira:RHEL-12277
+
+* Fri Aug 25 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-54
+- update vendored components and shortnames
+- Related: #2176055
+
+* Mon Jul 10 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-53
+- update vendored components
+- Related: #2176055
+
+* Sat Jul 08 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-52
+- update vendored components
+- Related: #2176055
+
+* Tue Mar 21 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-51
+- be sure default_capabilities contain SYS_CHROOT
+- Resolves: #2166195
+
+* Thu Mar 09 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-50
 - improve shortnames generation
-- Related: #2123641
-
-* Fri Feb 17 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-61
-- update vendored components and configuration files
-- Related: #2123641
-
-* Tue Jan 31 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-60
-- add missing systemd directories
-- Related: #2123641
-
-* Fri Jan 27 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-59
-- always define default_capablities in RHEL8
-- Related: #2123641
-
-* Fri Jan 27 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-58
-- update vendored components and configuration files
-- Related: #2123641
-
-* Wed Jan 25 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-57
-- fix vendoring script
-- Related: #2123641
-
-* Wed Jan 25 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-56
-- update vendored components and configuration files
-- Related: #2123641
-
-* Tue Jan 24 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-55
-- update vendored components and configuration files
-- Related: #2123641
-
-* Wed Jan 18 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-54
-- readd containers-storage.conf.5.md
-- Related: #2123641
-
-* Wed Jan 18 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-53
-- point c/storage to 1.44.0 as 1.44.1 is missing files upstream
-- Related: #2123641
-
-* Tue Jan 17 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-52
-- update vendored components and configuration files
-- Related: #2123641
-
-* Fri Jan 13 2023 Jindrich Novy <jnovy@redhat.com>
-- update vendored components and configuration files
-- Related: #2123641
-
-* Thu Jan 05 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-50
-- update vendored components, regenerate shortnames
-- Related: #2123641
+- Related: #2176055
 
 * Mon Jan 02 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-49
 - update vendored components and configuration files
