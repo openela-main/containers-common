@@ -58,3 +58,10 @@ fi
 				"keyctl",' seccomp.json
 [ `grep \"socket\", seccomp.json | wc -l` == 0 ] && sed -i '/\"socketcall\",/i \
 				"socket",' seccomp.json
+rhpkg clone redhat-release
+cd redhat-release
+rhpkg switch-branch rhel-9.4.0
+rhpkg prep
+cp -f redhat-release-*/RPM-GPG* ../
+cd -
+rm -rf redhat-release

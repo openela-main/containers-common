@@ -4,15 +4,15 @@
 # pick the oldest version on c/image, c/common, c/storage vendored in
 # podman/skopeo/podman.
 %global skopeo_branch main
-%global image_branch v5.26.1
-%global common_branch v0.55.1
-%global storage_branch v1.48.0
+%global image_branch v5.29.2
+%global common_branch v0.57.3
+%global storage_branch v1.51.0
 %global shortnames_branch main
 
 Epoch: 2
 Name: containers-common
 Version: 1
-Release: 55%{?dist}
+Release: 61%{?dist}
 Summary: Common configuration and documentation for containers
 License: ASL 2.0
 ExclusiveArch: %{go_arches}
@@ -173,6 +173,30 @@ EOF
 %{_datadir}/rhel/secrets/*
 
 %changelog
+* Thu Feb 08 2024 Jindrich Novy <jnovy@redhat.com> - 2:1-61
+- update vendored components
+- Related: Jira:RHEL-2112
+
+* Tue Jan 02 2024 Jindrich Novy <jnovy@redhat.com> - 2:1-60
+- Update vendored components
+- Related: Jira:RHEL-2112
+
+* Wed Oct 11 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-59
+- fix shortnames
+- Related: Jira:RHEL-2112
+
+* Thu Sep 14 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-58
+- implement GPG auto updating mechanism from redhat-release
+- Resolves: #RHEL-3164
+
+* Wed Sep 13 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-57
+- update GPG keys to the current content of redhat-release
+- Resolves: #RHEL-3164
+
+* Fri Aug 25 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-56
+- update vendored components and shortnames
+- Related: #2176063
+
 * Wed Jul 19 2023 Jindrich Novy <jnovy@redhat.com> - 2:1-55
 - fix vendoring script
 - Related: #2176063

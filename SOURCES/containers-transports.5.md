@@ -16,6 +16,8 @@ they are evaluated. For example: if evaluated on a remote server, image names
 might refer to paths on that server; relative paths are relative to the current
 directory of the image consumer.
 
+<!-- atomic: is deprecated and not documented here. -->
+
 ### **containers-storage**:[**[**storage-specifier**]**]{image-id|docker-reference[@image-id]}
 
 An image located in a local containers storage.
@@ -38,10 +40,13 @@ By default, uses the authorization state in `$XDG_RUNTIME_DIR/containers/auth.js
 If the authorization state is not found there, `$HOME/.docker/config.json` is checked, which is set using docker-login(1).
 The containers-registries.conf(5) further allows for configuring various settings of a registry.
 
-Note that a _docker-reference_ has the following format: `name[:tag|@digest]`.
+Note that a _docker-reference_ has the following format: _name_[**:**_tag_ | **@**_digest_].
 While the docker transport does not support both a tag and a digest at the same time some formats like containers-storage do.
 Digests can also be used in an image destination as long as the manifest matches the provided digest.
+
+The docker transport supports pushing images without a tag or digest to a registry when the image name is suffixed with **@@unknown-digest@@**. The _name_**@@unknown-digest@@** reference format cannot be used with a reference that has a tag or digest.
 The digest of images can be explored with skopeo-inspect(1).
+
 If `name` does not contain a slash, it is treated as `docker.io/library/name`.
 Otherwise, the component before the first slash is checked if it is recognized as a `hostname[:port]` (i.e., it contains either a . or a :, or the component is exactly localhost).
 If the first component of name is not recognized as a `hostname[:port]`, `name` is treated as `docker.io/name`.
@@ -54,7 +59,7 @@ Alternatively, for reading archives, @_source-index_ is a zero-based index in ar
 (to access untagged images).
 If neither _docker-reference_ nor @_source_index is specified when reading an archive, the archive must contain exactly one image.
 
-It is further possible to copy data to stdin by specifying `docker-archive:/dev/stdin` but note that the used file must be seekable.
+The _path_ can refer to a stream, e.g. `docker-archive:/dev/stdin`.
 
 ### **docker-daemon:**_docker-reference|algo:digest_
 
@@ -66,20 +71,30 @@ The _algo:digest_ refers to the image ID reported by docker-inspect(1).
 
 An image in a directory structure compliant with the "Open Container Image Layout Specification" at _path_.
 
-_Path_ terminates at the first `:` character; any further `:` characters are not separators, but a part of _reference_.
-Specify a _reference_ to allow storing multiple images within the same _path_.
+The _path_ value terminates at the first `:` character; any further `:` characters are not separators, but a part of _reference_.
+The _reference_ is used to set, or match, the `org.opencontainers.image.ref.name` annotation in the top-level index.
+If _reference_ is not specified when reading an image, the directory must contain exactly one image.
 
 ### **oci-archive:**_path[:reference]_
 
 An image in a tar(1) archive with contents compliant with the "Open Container Image Layout Specification" at _path_.
 
-_Path_ terminates at the first `:` character; any further `:` characters are not separators, but a part of _reference_.
-Specify a _reference_ to allow storing multiple images within the same _path_.
+The _path_ value terminates at the first `:` character; any further `:` characters are not separators, but a part of _reference_.
+The _reference_ is used to set, or match, the `org.opencontainers.image.ref.name` annotation in the top-level index.
+If _reference_ is not specified when reading an archive, the archive must contain exactly one image.
 
 ### **ostree:**_docker-reference[@/absolute/repo/path]_
 
 An image in the local ostree(1) repository.
 _/absolute/repo/path_ defaults to _/ostree/repo_.
+
+### **sif:**_path_
+
+An image using the Singularity image format at _path_.
+
+Only reading images is supported, and not all scripts can be represented in the OCI format.
+
+<!-- tarball: can only usefully be used from Go callers who call tarballReference.ConfigUpdate, and is not documented here. -->
 
 ## Examples
 

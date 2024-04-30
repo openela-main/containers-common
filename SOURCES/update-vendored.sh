@@ -23,7 +23,8 @@ for P in podman skopeo buildah; do
   else
     $PKG --release rhel-8 prep
   fi
-  DIR=`ls -d -- */ | grep "^$P"`
+  rm -rf *SPECPARTS
+  DIR=`ls -d -- */ | grep "$P"`
   grep github.com/containers/image $DIR/go.mod | cut -d\  -f2 | sed 's,-.*,,'>> /tmp/ver_image
   grep github.com/containers/common $DIR/go.mod | cut -d\  -f2 | sed 's,-.*,,' >> /tmp/ver_common
   grep github.com/containers/storage $DIR/go.mod | cut -d\  -f2 | sed 's,-.*,,' >> /tmp/ver_storage
