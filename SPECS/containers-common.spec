@@ -12,7 +12,7 @@
 Epoch: 2
 Name: containers-common
 Version: 1
-Release: 61%{?dist}
+Release: 91%{?dist}
 Summary: Common configuration and documentation for containers
 License: ASL 2.0
 ExclusiveArch: %{go_arches}
@@ -173,6 +173,18 @@ EOF
 %{_datadir}/rhel/secrets/*
 
 %changelog
+* Wed Apr 17 2024 Jindrich Novy <jnovy@redhat.com> - 2:1-91
+- rebuild for the wrong tag
+- Related: RHEL-31946
+
+* Fri Apr 05 2024 Lokesh Mandvekar <lsm5@redhat.com> - 2:1-90
+- Bump release to way higher than rhel 8.10 to preserve upgrade path
+- Related: Jira:RHEL-31946
+
+* Wed Feb 14 2024 Jindrich Novy <jnovy@redhat.com> - 2:1-62
+- regenerate shortnames from Pyxis and update vendored components
+- Related: Jira:RHEL-2112
+
 * Thu Feb 08 2024 Jindrich Novy <jnovy@redhat.com> - 2:1-61
 - update vendored components
 - Related: Jira:RHEL-2112
