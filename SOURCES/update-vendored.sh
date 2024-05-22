@@ -18,12 +18,12 @@ for P in podman skopeo buildah; do
   $PKG clone $P
   cd $P
   $PKG switch-branch $BRN
-  cache_deploy
   if [ $BRN != stream-container-tools-rhel8 ]; then
     $PKG prep
   else
     $PKG --release rhel-8 prep
   fi
+  rm -rf *SPECPARTS
   DIR=`ls -d -- */ | grep "$P"`
   grep github.com/containers/image $DIR/go.mod | cut -d\  -f2 | sed 's,-.*,,'>> /tmp/ver_image
   grep github.com/containers/common $DIR/go.mod | cut -d\  -f2 | sed 's,-.*,,' >> /tmp/ver_common
