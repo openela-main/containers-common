@@ -4,15 +4,15 @@
 # pick the oldest version on c/image, c/common, c/storage vendored in
 # podman/skopeo/podman.
 %global skopeo_branch main
-%global image_branch v5.29.2
-%global common_branch v0.57.3
+%global image_branch v5.29.3
+%global common_branch v0.57.5
 %global storage_branch v1.51.0
 %global shortnames_branch main
 
 Epoch: 2
 Name: containers-common
 Version: 1
-Release: 81%{?dist}
+Release: 82%{?dist}
 Summary: Common configuration and documentation for containers
 License: ASL 2.0
 # arch limitation because of go-md2man (missing on i686)
@@ -175,6 +175,10 @@ EOF
 %{_datadir}/rhel/secrets/*
 
 %changelog
+* Wed Jul 17 2024 Jindrich Novy <jnovy@redhat.com> - 2:1-82
+- update vendored components 
+- Resolves: RHEL-40801
+
 * Wed Feb 14 2024 Jindrich Novy <jnovy@redhat.com> - 2:1-81
 - Update shortnames from Pyxis
 - Related: Jira:RHEL-2110
