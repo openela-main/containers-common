@@ -11,10 +11,9 @@ a TOML format that can be easily modified and versioned.
 
 Container engines read the __/usr/share/containers/containers.conf__,
 __/etc/containers/containers.conf__, and __/etc/containers/containers.conf.d/\*.conf__
-files if they exist.
-When running in rootless mode, they also read
-__$HOME/.config/containers/containers.conf__ and
-__$HOME/.config/containers/containers.conf.d/\*.conf__ files.
+for global configuration that effects all users.
+For user specific configuration it reads __\$XDG_CONFIG_HOME/containers/containers.conf__ and
+__\$XDG_CONFIG_HOME/containers/containers.conf.d/\*.conf__ files. When `$XDG_CONFIG_HOME` is not set it falls back to using `$HOME/.config` instead.
 
 Fields specified in containers conf override the default options, as well as
 options in previously read containers.conf files.
@@ -42,13 +41,13 @@ instance, `CONTAINERS_CONF=/tmp/my_containers.conf`.
 
 ## MODULES
 A module is a containers.conf file located directly in or a sub-directory of the following three directories:
- - __$HOME/.config/containers/containers.conf.modules__
+ - __\$XDG_CONFIG_HOME/containers/containers.conf.modules__ or  __\$HOME/.config/containers/containers.conf.modules__ if `$XDG_CONFIG_HOME` is not set.
  - __/etc/containers/containers.conf.modules__
  - __/usr/share/containers/containers.conf.modules__
 
 Files in those locations are not loaded by default but only on-demand.  They are loaded after all system and user configuration files but before `CONTAINERS_CONF_OVERRIDE` hence allowing for overriding system and user configs.
 
-Modules are currently supported by podman(1).  The `podman --module` flag allows for loading a module and can be specified multiple times.  If the specified value is an absolute path, the config file will be loaded directly.  Relative paths are resolved relative to the three module directories mentioned above and in the specified order such that modules in `$HOME` allow for overriding those in `/etc` and `/usr/share`.  Modules in `$HOME` (or `$XDG_CONFIG_HOME` if specified) are only used for rootless users.
+Modules are currently supported by podman(1).  The `podman --module` flag allows for loading a module and can be specified multiple times.  If the specified value is an absolute path, the config file will be loaded directly.  Relative paths are resolved relative to the three module directories mentioned above and in the specified order such that modules in `$XDG_CONFIG_HOME/$HOME` allow for overriding those in `/etc` and `/usr/share`.
 
 ## APPENDING TO STRING ARRAYS
 
@@ -59,7 +58,7 @@ Consider the following example:
 modules1.conf: env=["1=true"]
 modules2.conf: env=["2=true"]
 modules3.conf: env=["3=true", {append=true}]
-modules3.conf: env=["4=true"]
+modules4.conf: env=["4=true"]
 ```
 
 After loading the files in the given order, the final contents are `env=["2=true", "3=true", "4=true"]`.  If modules4.conf would set `{append=false}`, the final contents would be `env=["4=true"]`.
@@ -118,7 +117,7 @@ Options are:
 
 **cgroupns**="private"
 
-Default way to to create a cgroup namespace for the container.
+Default way to create a cgroup namespace for the container.
 Options are:
 `private` Create private Cgroup Namespace for the container.
 `host`    Share host Cgroup Namespace with the container.
@@ -227,9 +226,16 @@ Path to the container-init binary, which forwards signals and reaps processes
 within containers. Note that the container-init binary will only be used when
 the `--init` for podman-create and podman-run is set.
 
+**interface_name**=""
+
+Default way to set interface names inside containers. Defaults to legacy pattern
+of ethX, where X is an integer, when left undefined.
+Options are:
+  `device`   Uses the network_interface name from the network config as interface name. Falls back to the ethX pattern if the network_interface is not set.
+
 **ipcns**="shareable"
 
-Default way to to create a IPC namespace for the container.
+Default way to create a IPC namespace for the container.
 Options are:
   `host`     Share host IPC Namespace with the container.
   `none`     Create shareable IPC Namespace for the container without a private /dev/shm.
@@ -276,7 +282,7 @@ Example:  [ "type=bind,source=/var/lib/foobar,destination=/var/lib/foobar,ro", ]
 
 **netns**="private"
 
-Default way to to create a NET namespace for the container.
+Default way to create a NET namespace for the container.
 Options are:
   `private` Create private NET Namespace for the container.
   `host`    Share host NET Namespace with the container.
@@ -293,7 +299,7 @@ Tune the host's OOM preferences for containers (accepts values from -1000 to 100
 
 **pidns**="private"
 
-Default way to to create a PID namespace for the container.
+Default way to create a PID namespace for the container.
 Options are:
   `private` Create private PID Namespace for the container.
   `host`    Share host PID Namespace with the container.
@@ -346,14 +352,14 @@ Sets umask inside the container.
 
 **userns**="host"
 
-Default way to to create a USER namespace for the container.
+Default way to create a USER namespace for the container.
 Options are:
   `private` Create private USER Namespace for the container.
   `host`    Share host USER Namespace with the container.
 
 **utsns**="private"
 
-Default way to to create a UTS namespace for the container.
+Default way to create a UTS namespace for the container.
 Options are:
   `private` Create private UTS Namespace for the container.
   `host`    Share host UTS Namespace with the container.
@@ -436,10 +442,10 @@ default_subnet_pools = [
 ]
 ```
 
-**default_rootless_network_cmd**="slirp4netns"
+**default_rootless_network_cmd**="pasta"
 
 Configure which rootless network program to use by default. Valid options are
-`slirp4netns` (default) and `pasta`.
+`slirp4netns` and `pasta` (default).
 
 **network_config_dir**="/etc/cni/net.d/"
 
@@ -448,6 +454,13 @@ For the CNI backend the default is __/etc/cni/net.d__ as root
 and __$HOME/.config/cni/net.d__ as rootless.
 For the netavark backend "/etc/containers/networks" is used as root
 and "$graphroot/networks" as rootless.
+
+**firewall_driver**=""
+
+The firewall driver to be used by netavark.
+The default is empty which means netavark will pick one accordingly. Current supported
+drivers are "iptables", "nftables", "none" (no firewall rules will be created) and "firewalld" (firewalld is
+experimental at the moment and not recommend outside of testing).
 
 **dns_bind_port**=53
 
@@ -569,7 +582,7 @@ The unit can be b (bytes), k (kilobytes), m (megabytes) or g (gigabytes).
 The format for the size is `<number><unit>`, e.g., `1b` or `3g`.
 If no unit is included then the size will be in bytes.
 When the limit is exceeded, the logfile will be rotated and the old one will be deleted.
-If the maximumn size is set to 0, then no limit will be applied,
+If the maximum size is set to 0, then no limit will be applied,
 and the logfile will not be rotated.
 
 **events_logger**="journald"
@@ -588,6 +601,17 @@ Valid values are: `file`, `journald`, and `none`.
 
 Creates a more verbose container-create event which includes a JSON payload
 with detailed information about the container.  Set to false by default.
+
+**healthcheck_events**=true|false
+
+Whenever Podman should log healthcheck events.
+With many running healthcheck on short interval Podman will spam the event
+log a lot as it generates a event for each single healthcheck run. Because
+this event is optional and only useful to external consumers that may want
+to know when a healthcheck is run or failed allow users to turn it off by
+setting it to false.
+
+Default is true.
 
 **helper_binaries_dir**=["/usr/libexec/podman", ...]
 
@@ -629,6 +653,10 @@ The default path on Windows is:
 **hooks_dir**=["/etc/containers/oci/hooks.d", ...]
 
 Path to the OCI hooks directories for automatically executed hooks.
+
+**cdi_spec_dirs**=["/etc/cdi", ...]
+
+Directories to scan for CDI Spec files.
 
 **image_default_format**="oci"|"v2s2"|"v2s1"
 
@@ -722,10 +750,11 @@ Whether to use chroot instead of pivot_root in the runtime.
 
 **num_locks**=2048
 
-Number of locks available for containers and pods. Each created container or
-pod consumes one lock. The default number available is 2048. If this is
-changed, a lock renumbering must be performed, using the
-`podman system renumber` command.
+Number of locks available for containers, pods, and volumes.
+Each created container, pod, or volume consumes one lock.
+Locks are recycled and can be reused after the associated container, pod, or volume is removed.
+The default number available is 2048.
+If this is changed, a lock renumbering must be performed, using the `podman system renumber` command.
 
 **pod_exit_policy**="continue"
 
@@ -749,13 +778,21 @@ Pull image before running or creating a container. The default is **missing**.
 Indicates whether the application should be running in remote mode. This flag modifies the
 --remote option on container engines. Setting the flag to true will default `podman --remote=true` for access to the remote Podman service.
 
+**retry** = 3
+
+Number of times to retry pulling/pushing images in case of failure.
+
+**retry_delay** = ""
+
+Delay between retries in case pulling/pushing image fails. If set, container engines will retry at the set interval, otherwise they delay 2 seconds and then exponentially back off.
+
 **runtime**=""
 
 Default OCI specific runtime in runtimes that will be used by default. Must
 refer to a member of the runtimes table. Default runtime will be searched for
-on the system using the priority: "crun", "runc", "kata".
+on the system using the priority: "crun", "runc", "runj", "kata", "runsc", "ocijail"
 
-**runtime_supports_json**=["crun", "runc", "kata", "runsc", "youki", "krun"]
+**runtime_supports_json**=["crun", "crun-vm", "runc", "kata", "runsc", "youki", "krun"]
 
 The list of the OCI runtimes that support `--format=json`.
 
@@ -763,7 +800,7 @@ The list of the OCI runtimes that support `--format=json`.
 
 The list of OCI runtimes that support running containers with KVM separation.
 
-**runtime_supports_nocgroups**=["crun", "krun"]
+**runtime_supports_nocgroups**=["crun", "crun-vm", "krun"]
 
 The list of OCI runtimes that support running containers without CGroups.
 
@@ -814,7 +851,10 @@ the primary uid/gid of the container.
 
 **compression_format**="gzip"
 
-Specifies the compression format to use when pushing an image. Supported values are: `gzip`, `zstd` and `zstd:chunked`.
+Specifies the compression format to use when pushing an image. Supported values
+are: `gzip`, `zstd` and `zstd:chunked`. This field is ignored when pushing
+images to the docker-daemon and docker-archive formats. It is also ignored
+when the manifest format is set to v2s2.
 
 **compression_level**="5"
 
@@ -822,10 +862,6 @@ The compression level to use when pushing an image. Valid options
 depend on the compression format used. For gzip, valid options are
 1-9, with a default of 5. For zstd, valid options are 1-20, with a
 default of 3.
-
-**podmansh_timeout**=30
-
-Number of seconds to wait for podmansh logins.
 
 ## SERVICE DESTINATION TABLE
 The `engine.service_destinations` table contains configuration options used to set up remote connections to the podman service for the podman API.
@@ -883,13 +919,13 @@ The size of the disk in GB created when init-ing a podman-machine VM
 
 **image**=""
 
-Default image URI when creating a new VM using `podman machine init`.
-Options: On Linux/Mac, `testing`, `stable`, `next`. On Windows, the major
-version of the OS (e.g `36`) for Fedora 36. For all platforms you can
-alternatively specify a custom download URL to an image. Container engines
-translate URIs $OS and $ARCH to the native OS and ARCH. URI "https://example.com/$OS/$ARCH/foobar.ami" would become "https://example.com/linux/amd64/foobar.ami" on a Linux AMD machine.
-The default value
-is `testing` on Linux/Mac, and on Windows.
+Image used when creating a new VM using `podman machine init`.
+Can be specified as a registry with a bootable OCI artifact, download URL, or a local path.
+Registry target must be in the form of `docker://registry/repo/image:version`.
+Container engines translate URIs $OS and $ARCH to the native OS and ARCH.
+URI "https://example.com/$OS/$ARCH/foobar.ami" would become
+"https://example.com/linux/amd64/foobar.ami" on a Linux AMD machine.
+If unspecified, the default Podman machine image will be used.
 
 **memory**=2048
 
@@ -917,6 +953,11 @@ Virtualization provider to be used for running a podman-machine VM. Empty value
 is interpreted as the default provider for the current host OS. On Linux/Mac
 default is `QEMU` and on Windows it is `WSL`.
 
+**rosetta**="true"
+
+Rosetta supports running x86_64 Linux binaries on a Podman machine on Apple silicon.
+The default value is `true`. Supported on AppleHV(arm64) machines only.
+
 ## FARMS TABLE
 The `farms` table contains configuration options used to group up remote connections into farms that will be used when sending out builds to different machines in a farm via `podman buildfarm`.
 
@@ -928,6 +969,25 @@ The default farm to use when farming out builds.
 
 Map of farms created where the key is the farm name and the value is the list of system connections.
 
+## PODMANSH TABLE
+The `podmansh` table contains configuration options used by podmansh.
+
+**shell**="/bin/sh"
+
+The shell to spawn in the container.
+The default value is `/bin/sh`.
+
+**container**="podmansh"
+
+Name of the container that podmansh joins.
+The default value is `podmansh`.
+
+**timeout**=0
+
+Number of seconds to wait for podmansh logins. This value if favoured over the deprecated field `engine.podmansh_timeout` if set.
+The default value is 30.
+
+
 # FILES
 
 **containers.conf**
@@ -937,8 +997,8 @@ provide a default configuration. Administrators can override fields in this
 file by creating __/etc/containers/containers.conf__ to specify their own
 configuration. They may also drop `.conf` files in
 __/etc/containers/containers.conf.d__ which will be loaded in alphanumeric order.
-Rootless users can further override fields in the config by creating a config
-file stored in the __$HOME/.config/containers/containers.conf__ file or __.conf__ files in __$HOME/.config/containers/containers.conf.d__.
+For user specific configuration it reads __\$XDG_CONFIG_HOME/containers/containers.conf__ and
+__\$XDG_CONFIG_HOME/containers/containers.conf.d/\*.conf__ files. When `$XDG_CONFIG_HOME` is not set it falls back to using `$HOME/.config` instead.
 
 Fields specified in a containers.conf file override the default options, as
 well as options in previously loaded containers.conf files.

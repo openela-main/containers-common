@@ -27,7 +27,7 @@ No bare options are used. The format of TOML can be simplified to:
 The `storage` table supports the following options:
 
 **driver**=""
-  Copy On Write (COW) container storage driver. Valid drivers are "overlay", "vfs", "devmapper", "aufs", "btrfs", and "zfs". Some drivers (for example, "zfs", "btrfs", and "aufs") may not work if your kernel lacks support for the filesystem.
+  Copy On Write (COW) container storage driver. Valid drivers are "overlay", "vfs", "aufs", "btrfs", and "zfs". Some drivers (for example, "zfs", "btrfs", and "aufs") may not work if your kernel lacks support for the filesystem.
 This field is required to guarantee proper operation.
 Valid rootless drivers are "btrfs", "overlay", and "vfs".
 Rootless users default to the driver defined in the system configuration when possible.
@@ -84,7 +84,7 @@ The `storage.options` table supports the following options:
 **additionalimagestores**=[]
   Paths to additional container image stores. Usually these are read/only and stored on remote network shares.
 
-**pull_options** = {enable_partial_images = "false", use_hard_links = "false", ostree_repos=""}
+**pull_options** = {enable_partial_images = "true", use_hard_links = "false", ostree_repos=""}
 
 Allows specification of how storage is populated when pulling images. This
 option can speed the pulling process of images compressed with format zstd:chunked. Containers/storage looks
@@ -95,7 +95,7 @@ container registry. These options can deduplicate pulling of content, disk
 storage of content and can allow the kernel to use less memory when running
 containers.
 
-containers/storage supports three keys
+containers/storage supports four keys
   * enable_partial_images="true" | "false"
     Tells containers/storage to look for files previously pulled in storage
     rather then always pulling them from the container registry.
@@ -107,27 +107,9 @@ containers/storage supports three keys
     previously pulled content which can be used when attempting to avoid
     pulling content from the container registry
   * convert_images = "false" | "true"
-    If set to true, containers/storage will convert images to the a format compatible with
+    If set to true, containers/storage will convert images to a format compatible with
     partial pulls in order to take advantage of local deduplication and hardlinking.  It is an
     expensive operation so it is not enabled by default.
-
-**remap-uids=**""
-**remap-gids=**""
-  Remap-UIDs/GIDs is the mapping from UIDs/GIDs as they should appear inside of a container, to the UIDs/GIDs outside of the container, and the length of the range of UIDs/GIDs.  Additional mapped sets can be listed and will be heeded by libraries, but there are limits to the number of mappings which the kernel will allow when you later attempt to run a container.
-
-  Example
-     remap-uids = "0:1668442479:65536"
-     remap-gids = "0:1668442479:65536"
-
-  These mappings tell the container engines to map UID 0 inside of the container to UID 1668442479 outside.  UID 1 will be mapped to 1668442480. UID 2 will be mapped to 1668442481, etc, for the next 65533 UIDs in succession.
-
-**remap-user**=""
-**remap-group**=""
-  Remap-User/Group is a user name which can be used to look up one or more UID/GID ranges in the /etc/subuid or /etc/subgid file.  Mappings are set up starting with an in-container ID of 0 and then a host-level ID taken from the lowest range that matches the specified name, and using the length of that range. Additional ranges are then assigned, using the ranges which specify the lowest host-level IDs first, to the lowest not-yet-mapped in-container ID, until all of the entries have been used for maps.  This setting overrides the Remap-UIDs/GIDs setting.
-
-  Example
-     remap-user = "containers"
-     remap-group = "containers"
 
 **root-auto-userns-user**=""
   Root-auto-userns-user is a user name which can be used to look up one or more UID/GID ranges in the /etc/subuid and /etc/subgid file.  These ranges will be partitioned to containers configured to create automatically a user namespace.  Containers configured to automatically create a user namespace can still overlap with containers having an explicit mapping set.  This setting is ignored when running as rootless.
@@ -157,66 +139,6 @@ The `storage.options.btrfs` table supports the following options:
 
 **size**=""
   Maximum size of a container image.   This flag can be used to set quota on the size of container images. (format: <number>[<unit>], where unit = b (bytes), k (kilobytes), m (megabytes), or g (gigabytes))
-
-### STORAGE OPTIONS FOR THINPOOL (devicemapper) TABLE
-
-The `storage.options.thinpool` table supports the following options for the `devicemapper` driver:
-
-**autoextend_percent**=""
-  Tells the thinpool driver the amount by which the thinpool needs to be grown. This is specified in terms of % of pool size. So a value of 20 means that when threshold is hit, pool will be grown by 20% of existing pool size. (default: 20%)
-
-**autoextend_threshold**=""
-  Tells the driver the thinpool extension threshold in terms of percentage of pool size. For example, if threshold is 60, that means when pool is 60% full, threshold has been hit. (default: 80%)
-
-**basesize**=""
-  Specifies the size to use when creating the base device, which limits the size of images and containers. (default: 10g)
-
-**blocksize**=""
-  Specifies a custom blocksize to use for the thin pool. (default: 64k)
-
-**directlvm_device**=""
-  Specifies a custom block storage device to use for the thin pool. Required for using graphdriver `devicemapper`.
-
-**directlvm_device_force**=""
-  Tells driver to wipe device (directlvm_device) even if device already has a filesystem.  (default: false)
-
-**fs**="xfs"
-  Specifies the filesystem type to use for the base device. (default: xfs)
-
-**log_level**=""
-  Sets the log level of devicemapper.
-
-    0: LogLevelSuppress 0 (default)
-    2: LogLevelFatal
-    3: LogLevelErr
-    4: LogLevelWarn
-    5: LogLevelNotice
-    6: LogLevelInfo
-    7: LogLevelDebug
-
-**metadata_size**=""
-  metadata_size is used to set the `pvcreate --metadatasize` options when creating thin devices. (Default 128k)
-
-**min_free_space**=""
-  Specifies the min free space percent in a thin pool required for new device creation to succeed. Valid values are from 0% - 99%. Value 0% disables. (default: 10%)
-
-**mkfsarg**=""
-  Specifies extra mkfs arguments to be used when creating the base device.
-
-**mountopt**=""
-  Comma separated list of default options to be used to mount container images.  Suggested value "nodev". Mount options are documented in the mount(8) man page.
-
-**size**=""
-  Maximum size of a container image.  This flag can be used to set quota on the size of container images. (format: <number>[<unit>], where unit = b (bytes), k (kilobytes), m (megabytes), or g (gigabytes))
-
-**use_deferred_deletion**=""
-  Marks thinpool device for deferred deletion. If the thinpool is in use when the driver attempts to delete it, the driver will attempt to delete device every 30 seconds until successful, or when it restarts.  Deferred deletion permanently deletes the device and all data stored in the device will be lost. (default: true).
-
-**use_deferred_removal**=""
-  Marks devicemapper block device for deferred removal.  If the device is in use when its driver attempts to remove it, the driver tells the kernel to remove the device as soon as possible.  Note this does not free up the disk space, use deferred deletion to fully remove the thinpool.  (default: true).
-
-**xfs_nospace_max_retries**=""
-  Specifies the maximum number of retries XFS should attempt to complete IO when ENOSPC (no space) error is returned by underlying storage device. (default: 0, which means to try continuously.)
 
 ### STORAGE OPTIONS FOR OVERLAY TABLE
 
@@ -277,6 +199,9 @@ based file systems.
 
 **size**=""
   Maximum size of a read/write layer.   This flag can be used to set quota on the size of a read/write layer of a container. (format: <number>[<unit>], where unit = b (bytes), k (kilobytes), m (megabytes), or g (gigabytes))
+
+**use_composefs** = "false"
+    Use ComposeFS to mount the data layers image.  ComposeFS support is experimental and not recommended for production use.  (default: false)
 
 ### STORAGE OPTIONS FOR VFS TABLE
 

@@ -4,15 +4,15 @@
 # pick the oldest version on c/image, c/common, c/storage vendored in
 # podman/skopeo/podman.
 %global skopeo_branch main
-%global image_branch v5.29.2
-%global common_branch v0.57.3
-%global storage_branch v1.51.0
+%global image_branch v5.32.2
+%global common_branch v0.60.2
+%global storage_branch v1.55.0
 %global shortnames_branch main
 
 Epoch: 2
 Name: containers-common
 Version: 1
-Release: 91%{?dist}
+Release: 93%{?dist}
 Summary: Common configuration and documentation for containers
 License: ASL 2.0
 ExclusiveArch: %{go_arches}
@@ -173,13 +173,21 @@ EOF
 %{_datadir}/rhel/secrets/*
 
 %changelog
-* Wed Apr 17 2024 Jindrich Novy <jnovy@redhat.com> - 2:1-91
-- rebuild for the wrong tag
-- Related: RHEL-31946
+* Thu Oct 17 2024 Jindrich Novy <jnovy@redhat.com> - 2:1-93
+- rebuild
+- Resolves: RHEL-62937
+
+* Tue Aug 27 2024 Jindrich Novy <jnovy@redhat.com> - 2:1-92
+- update vendored components
+- Related: RHEL-27608
+
+* Wed Aug 07 2024 Jindrich Novy <jnovy@redhat.com> - 2:1-91
+- Update shortnames and vendored components
+- Related: RHEL-27608
 
 * Fri Apr 05 2024 Lokesh Mandvekar <lsm5@redhat.com> - 2:1-90
 - Bump release to way higher than rhel 8.10 to preserve upgrade path
-- Related: Jira:RHEL-31946
+- Related: Jira:RHEL-31950
 
 * Wed Feb 14 2024 Jindrich Novy <jnovy@redhat.com> - 2:1-62
 - regenerate shortnames from Pyxis and update vendored components
