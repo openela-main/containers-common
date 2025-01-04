@@ -30,6 +30,7 @@ for FILE in *; do
 done
 ensure storage.conf    driver                        \"overlay\"
 ensure storage.conf    mountopt                      \"nodev,metacopy=on\"
+ensure storage.conf    pull_options                  {enable_partial_images\ =\ \"false\"\,\ use_hard_links\ =\ \"false\"\,\ ostree_repos=\"\"}
 if pwd | grep rhel-8 > /dev/null
 then
 awk -i inplace '/#default_capabilities/,/#\]/{gsub("#","",$0)}1' containers.conf

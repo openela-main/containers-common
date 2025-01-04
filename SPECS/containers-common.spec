@@ -12,7 +12,7 @@
 Epoch: 2
 Name: containers-common
 Version: 1
-Release: 93%{?dist}
+Release: 96%{?dist}
 Summary: Common configuration and documentation for containers
 License: ASL 2.0
 ExclusiveArch: %{go_arches}
@@ -173,6 +173,18 @@ EOF
 %{_datadir}/rhel/secrets/*
 
 %changelog
+* Thu Nov 14 2024 Jindrich Novy <jnovy@redhat.com> - 2:1-96
+- Be sure to enable_partial_images = false in storage.conf
+- Resolves: RHEL-65057
+
+* Wed Oct 30 2024 Jindrich Novy <jnovy@redhat.com> - 2:1-95
+- update vendored components and configuration files
+- Resolves: RHEL-62566
+
+* Mon Oct 28 2024 Lokesh Mandvekar <lsm5@redhat.com> - 2:1-94
+- enable_partial_images should be set to false
+- Resolves: RHEL-62937
+
 * Thu Oct 17 2024 Jindrich Novy <jnovy@redhat.com> - 2:1-93
 - rebuild
 - Resolves: RHEL-62937
