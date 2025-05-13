@@ -96,10 +96,12 @@ The default profile name is "container-default".
 
 **base_hosts_file**=""
 
-The hosts entries from the base hosts file are added to the containers hosts
-file. This must be either an absolute path or as special values "image" which
-uses the hosts file from the container image or "none" which means
-no base hosts file is used. The default is "" which will use /etc/hosts.
+Base file to create the `/etc/hosts` file inside the container. This must either
+be an absolute path to a file on the host system, or one of the following
+special flags:
+  ""      Use the host's `/etc/hosts` file (the default)
+  `none`  Do not use a base file (i.e. start with an empty file)
+  `image` Use the container image's `/etc/hosts` file as base file
 
 **cgroup_conf**=[]
 
@@ -121,6 +123,16 @@ Default way to create a cgroup namespace for the container.
 Options are:
 `private` Create private Cgroup Namespace for the container.
 `host`    Share host Cgroup Namespace with the container.
+
+**container_name_as_hostname**=true|false
+
+When no hostname is set for a container, use the container's name, with
+characters not valid for a hostname removed, as the hostname instead of
+the first 12 characters of the container's ID. Containers not running
+in a private UTS namespace will have their hostname set to the host's
+hostname regardless of this setting.
+
+Default is false.
 
 **default_capabilities**=[]
 
@@ -195,13 +207,25 @@ Pass all host environment variables into the container.
 
 **host_containers_internal_ip**=""
 
-Set the ip for the host.containers.internal entry in the containers /etc/hosts
-file. This can be set to "none" to disable adding this entry. By default it
-will automatically choose the host ip.
+Set the IP address the container should expect to connect to the host. The IP
+address is used by Podman to automatically add the `host.containers.internal`
+and `host.docker.internal` hostnames to the container's `/etc/hosts` file. It
+is also used for the *host-gateway* flag of Podman's `--add-host` CLI option.
+If no IP address is configured (the default), Podman will try to determine it
+automatically, but might fail to do so depending on the container's network
+setup. Adding these internal hostnames to `/etc/hosts` is silently skipped then.
+Set this config to `none` to never add the internal hostnames to `/etc/hosts`.
 
-NOTE: When using podman machine this entry will never be added to the containers
-hosts file instead the gvproxy dns resolver will resolve this hostname. Therefore
-it is not possible to disable the entry in this case.
+Note: If Podman is running in a virtual machine using `podman machine` (this
+includes Mac and Windows hosts), Podman will silently skip adding the internal
+hostnames to `/etc/hosts`, unless an IP address was configured manually. The
+internal hostnames are resolved by the gvproxy DNS resolver instead. This config
+has no effect on gvproxy. However, since `/etc/hosts` bypasses the DNS resolver,
+a manually configured IP address still takes precedence.
+
+Note: This config doesn't affect the actual network setup, it just tells Podman
+the IP address it should expect. Configuring an IP address here doesn't ensure
+that the container can actually reach the host using this IP address.
 
 **http_proxy**=true
 
@@ -290,8 +314,10 @@ Options are:
 
 **no_hosts**=false
 
-Create /etc/hosts for the container. By default, container engines manage
-/etc/hosts, automatically adding  the container's  own  IP  address.
+Do not modify the `/etc/hosts` file in the container. Podman assumes control
+over the container's `/etc/hosts` file by default; refer to the `--add-host`
+CLI option for details. To disable this, either set this config to `true`, or
+use the functionally identical `--no-hosts` CLI option.
 
 **oom_score_adj**=0
 
@@ -486,6 +512,9 @@ Name of destination for accessing the Podman service. See SERVICE DESTINATION TA
 List of compression algorithms. If set makes sure that requested compression variant
 for each platform is added to the manifest list keeping original instance intact in
 the same manifest list on every `manifest push`. Supported values are (`gzip`, `zstd` and `zstd:chunked`).
+`zstd:chunked` is incompatible with encrypting images, and will be treated as `zstd` with a warning
+in that case.
+
 
 Note: This is different from `compression_format` which allows users to select a default
 compression format for `push` and `manifest push`, while `add_compression` is limited to
@@ -593,7 +622,7 @@ The default method is different based on the platform that
 Podman is being run upon.  To determine the current value,
 use this command:
 
-`podman info --format {{.Host.EventLogger}`
+`podman info --format {{.Host.EventLogger}}`
 
 Valid values are: `file`, `journald`, and `none`.
 
@@ -855,6 +884,8 @@ Specifies the compression format to use when pushing an image. Supported values
 are: `gzip`, `zstd` and `zstd:chunked`. This field is ignored when pushing
 images to the docker-daemon and docker-archive formats. It is also ignored
 when the manifest format is set to v2s2.
+`zstd:chunked` is incompatible with encrypting images, and will be treated as `zstd` with a warning
+in that case.
 
 **compression_level**="5"
 
@@ -950,8 +981,14 @@ On Mac, the default volumes are:
 **provider**=""
 
 Virtualization provider to be used for running a podman-machine VM. Empty value
-is interpreted as the default provider for the current host OS. On Linux/Mac
-default is `QEMU` and on Windows it is `WSL`.
+is interpreted as the default provider for the current host OS.
+
+| Platform | Default Virtualization provider         | Optional |
+| -------- | --------------------------------------- | -------- |
+| Linux    | "" (qemu)                               | None     |
+| Windows  | "" ("wsl": Windows Subsystem for Linux) | "hyperv" (Windows Server Virtualization) |
+| Mac      | "" ("applehv": Apple Hypervisor)        | "libkrun" (Launch machine via libkrun platform, optimized for sharing GPU with the machine) |
+
 
 **rosetta**="true"
 

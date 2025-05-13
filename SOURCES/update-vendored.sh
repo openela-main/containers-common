@@ -25,6 +25,9 @@ for P in podman skopeo buildah; do
   fi
   rm -rf *SPECPARTS
   DIR=`ls -d -- */ | grep "$P"`
+  if [[ $DIR == *-build/ ]]; then
+    DIR=`ls -d $DIR/* | grep -v SPECPARTS`
+  fi
   grep github.com/containers/image $DIR/go.mod | cut -d\  -f2 | sed 's,-.*,,'>> /tmp/ver_image
   grep github.com/containers/common $DIR/go.mod | cut -d\  -f2 | sed 's,-.*,,' >> /tmp/ver_common
   grep github.com/containers/storage $DIR/go.mod | cut -d\  -f2 | sed 's,-.*,,' >> /tmp/ver_storage
@@ -33,8 +36,8 @@ done
 IMAGE_VER=`sort -n /tmp/ver_image | head -n1`
 COMMON_VER=`sort -n /tmp/ver_common | head -n1`
 STORAGE_VER=`sort -n /tmp/ver_storage | head -n1`
-sed -i "s,^%global.*image_branch.*,%global image_branch $IMAGE_VER," containers-common.spec
-sed -i "s,^%global.*common_branch.*,%global common_branch $COMMON_VER," containers-common.spec
-sed -i "s,^%global.*storage_branch.*,%global storage_branch $STORAGE_VER," containers-common.spec
+sed -i "s,^%global[ \t]*image_branch.*,%global image_branch $IMAGE_VER," containers-common.spec
+sed -i "s,^%global[ \t]*common_branch.*,%global common_branch $COMMON_VER," containers-common.spec
+sed -i "s,^%global[ \t]*storage_branch.*,%global storage_branch $STORAGE_VER," containers-common.spec
 rm -f /tmp/ver_image /tmp/ver_common /tmp/ver_storage
 rm -rf podman skopeo buildah

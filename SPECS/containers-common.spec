@@ -4,15 +4,15 @@
 # pick the oldest version on c/image, c/common, c/storage vendored in
 # podman/skopeo/podman.
 %global skopeo_branch main
-%global image_branch v5.32.2
-%global common_branch v0.60.2
-%global storage_branch v1.55.0
+%global image_branch v5.34.0
+%global common_branch v0.62.0
+%global storage_branch v1.57.1
 %global shortnames_branch main
 
 Epoch: 2
 Name: containers-common
 Version: 1
-Release: 96%{?dist}
+Release: 117%{?dist}
 Summary: Common configuration and documentation for containers
 License: ASL 2.0
 ExclusiveArch: %{go_arches}
@@ -49,6 +49,7 @@ Source14: https://raw.githubusercontent.com/containers/common/%{common_branch}/d
 Source15: https://raw.githubusercontent.com/containers/image/%{image_branch}/docs/containers-auth.json.5.md
 Source16: https://raw.githubusercontent.com/containers/image/%{image_branch}/docs/containers-registries.conf.d.5.md
 Source17: https://raw.githubusercontent.com/containers/shortnames/%{shortnames_branch}/shortnames.conf
+Source18: https://raw.githubusercontent.com/containers/common/refs/heads/main/pkg/hooks/docs/oci-hooks.5.md
 Source19: 001-rhel-shortnames-pyxis.conf
 Source20: 002-rhel-shortnames-overrides.conf
 Source21: RPM-GPG-KEY-redhat-release
@@ -75,6 +76,18 @@ It is required because the most of configuration files and docs come from projec
 which are vendored into Podman, Buildah, Skopeo, etc. but they are not packaged
 separately.
 
+%package extra
+Summary: Extra dependencies for Podman and Buildah
+Requires: %{name} = %{epoch}:%{version}-%{release}
+Requires: container-network-stack
+Requires: oci-runtime
+Requires: nftables
+Requires: passt
+
+%description extra
+This subpackage will handle dependencies common to Podman and Buildah which are
+not required by Skopeo.
+
 %prep
 
 %build
@@ -85,8 +98,10 @@ install -dp %{buildroot}%{_datadir}/containers/systemd
 install -m0644 %{SOURCE1} %{buildroot}%{_sysconfdir}/containers/storage.conf
 install -m0644 %{SOURCE5} %{buildroot}%{_sysconfdir}/containers/registries.conf
 install -m0644 %{SOURCE17} %{buildroot}%{_sysconfdir}/containers/registries.conf.d/000-shortnames.conf
-install -m0644 %{SOURCE19} %{buildroot}%{_sysconfdir}/containers/registries.conf.d/001-rhel-shortnames.conf
-install -m0644 %{SOURCE20} %{buildroot}%{_sysconfdir}/containers/registries.conf.d/002-rhel-shortnames-overrides.conf
+%if 0%{?fedora} == 0 && 0%{?centos} == 0
+    install -m0644 %{SOURCE19} %{buildroot}%{_sysconfdir}/containers/registries.conf.d/001-rhel-shortnames.conf
+    install -m0644 %{SOURCE20} %{buildroot}%{_sysconfdir}/containers/registries.conf.d/002-rhel-shortnames-overrides.conf
+%endif
 
 # for signature verification
 %if !0%{?rhel} || 0%{?centos}
@@ -114,6 +129,7 @@ go-md2man -in %{SOURCE12} -out %{buildroot}%{_mandir}/man5/containers-registries
 go-md2man -in %{SOURCE14} -out %{buildroot}%{_mandir}/man5/containers.conf.5
 go-md2man -in %{SOURCE15} -out %{buildroot}%{_mandir}/man5/containers-auth.json.5
 go-md2man -in %{SOURCE16} -out %{buildroot}%{_mandir}/man5/containers-registries.conf.d.5
+go-md2man -in %{SOURCE18} -out %{buildroot}%{_mandir}/man5/oci-hooks.5
 go-md2man -in %{SOURCE26} -out %{buildroot}%{_mandir}/man5/Containerfile.5
 go-md2man -in %{SOURCE27} -out %{buildroot}%{_mandir}/man5/containerignore.5
 
@@ -172,22 +188,48 @@ EOF
 %dir %{_datadir}/rhel/secrets
 %{_datadir}/rhel/secrets/*
 
+%files extra
+
 %changelog
-* Thu Nov 14 2024 Jindrich Novy <jnovy@redhat.com> - 2:1-96
-- Be sure to enable_partial_images = false in storage.conf
-- Resolves: RHEL-65057
+* Mon Mar 03 2025 Jindrich Novy <jnovy@redhat.com> - 2:1-117
+- rebuild against the proper target
+- Resolves: RHEL-78845
 
-* Wed Oct 30 2024 Jindrich Novy <jnovy@redhat.com> - 2:1-95
-- update vendored components and configuration files
-- Resolves: RHEL-62566
+* Wed Feb 26 2025 Jindrich Novy <jnovy@redhat.com> - 2:1-116
+- add files section for extra subpackage
+- Resolves: RHEL-78845
 
-* Mon Oct 28 2024 Lokesh Mandvekar <lsm5@redhat.com> - 2:1-94
-- enable_partial_images should be set to false
-- Resolves: RHEL-62937
+* Mon Feb 17 2025 Jindrich Novy <jnovy@redhat.com> - 2:1-115
+- Add containers-common-extra properly
+- Resolves: RHEL-78845
 
-* Thu Oct 17 2024 Jindrich Novy <jnovy@redhat.com> - 2:1-93
-- rebuild
-- Resolves: RHEL-62937
+* Thu Feb 13 2025 Jindrich Novy <jnovy@redhat.com> - 2:1-114
+- update vendored components
+- Related: RHEL-60277
+
+* Thu Feb 06 2025 Jindrich Novy <jnovy@redhat.com> - 2:1-113
+- Update shortnames from Pyxis
+- Resolves: RHEL-66761
+
+* Tue Jan 28 2025 Jindrich Novy <jnovy@redhat.com> - 2:1-112
+- ship RHEL shortnames only in RHEL - thanks to Dennis Gilmore
+- Related: RHEL-60277
+
+* Wed Jan 15 2025 Jindrich Novy <jnovy@redhat.com> - 2:1-111
+- Add missing oci-hooks.5 man page
+- Related: RHEL-60277
+
+* Fri Nov 29 2024 Jindrich Novy <jnovy@redhat.com> - 2:1-110
+- bump release to preserve upgrade path from RHEL9.5
+- Related: RHEL-60277
+
+* Fri Nov 29 2024 Jindrich Novy <jnovy@redhat.com> - 2:1-94
+- add containers-common-extra provides to satisfy new buildah spec
+- Related: RHEL-60277
+
+* Thu Nov 28 2024 Jindrich Novy <jnovy@redhat.com> - 2:1-93
+- update vendored components
+- Resolves: RHEL-69402
 
 * Tue Aug 27 2024 Jindrich Novy <jnovy@redhat.com> - 2:1-92
 - update vendored components

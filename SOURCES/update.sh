@@ -30,11 +30,11 @@ for FILE in *; do
 done
 ensure storage.conf    driver                        \"overlay\"
 ensure storage.conf    mountopt                      \"nodev,metacopy=on\"
-ensure storage.conf    pull_options                  {enable_partial_images\ =\ \"false\"\,\ use_hard_links\ =\ \"false\"\,\ ostree_repos=\"\"}
-if pwd | grep rhel-8 > /dev/null
+ensure registries.conf unqualified-search-registries [\"registry.access.redhat.com\",\ \"registry.redhat.io\",\ \"docker.io\"]
+
+if pwd | grep -e rhel-8 -e c8s > /dev/null
 then
 awk -i inplace '/#default_capabilities/,/#\]/{gsub("#","",$0)}1' containers.conf
-ensure registries.conf unqualified-search-registries [\"registry.access.redhat.com\",\ \"registry.redhat.io\",\ \"docker.io\"]
 ensure registries.conf short-name-mode               \"permissive\"
 ensure containers.conf runtime                       \"runc\"
 ensure containers.conf events_logger                 \"file\"
@@ -50,19 +50,29 @@ then
   sed -i '/^default_capabilities/a \
   "SYS_CHROOT",' containers.conf
 fi
-else
-ensure registries.conf unqualified-search-registries [\"registry.access.redhat.com\",\ \"registry.redhat.io\",\ \"docker.io\"]
+
+elif pwd | grep -e rhel-9 -e c9s > /dev/null
+then
 ensure registries.conf short-name-mode               \"enforcing\"
 ensure containers.conf runtime                       \"crun\"
+
+elif pwd | grep -e rhel-10 -e c10s > /dev/null
+then
+ensure registries.conf short-name-mode               \"enforcing\"
+ensure containers.conf runtime                       \"crun\"
+ensure containers.conf log_driver                    \"k8s-file\"
+else
+echo "Unknown release"
 fi
+
 [ `grep \"keyctl\", seccomp.json | wc -l` == 0 ] && sed -i '/\"kill\",/i \
 				"keyctl",' seccomp.json
 [ `grep \"socket\", seccomp.json | wc -l` == 0 ] && sed -i '/\"socketcall\",/i \
 				"socket",' seccomp.json
 rhpkg clone redhat-release
 cd redhat-release
-rhpkg switch-branch rhel-9.4.0
+rhpkg switch-branch rhel-9-main
 rhpkg prep
-cp -f redhat-release-*/RPM-GPG* ../
+cp -f redhat-release-*/redhat-release-*/RPM-GPG* ../../
 cd -
 rm -rf redhat-release
