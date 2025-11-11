@@ -12,7 +12,7 @@
 Epoch: 4
 Name: containers-common
 Version: 1
-Release: 134%{?dist}
+Release: 135%{?dist}
 Summary: Common configuration and documentation for containers
 License: ASL 2.0
 ExclusiveArch: %{go_arches}
@@ -194,6 +194,10 @@ EOF
 %files extra
 
 %changelog
+* Thu Sep 25 2025 Jindrich Novy <jnovy@redhat.com> - 4:1-135
+- Update rhel-shortnames-overrides to include complete list of UBI/RHEL images
+- Resolves: RHEL-116618
+
 * Mon Aug 18 2025 Jindrich Novy <jnovy@redhat.com> - 4:1-134
 - update vendored components for RHEL9.7
 - Related: RHEL-80816
