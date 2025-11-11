@@ -7,17 +7,17 @@
 # Packit will automatically update the image and storage versions on Fedora and
 # CentOS Stream dist-git PRs.
 %global skopeo_branch main
-%global image_branch v5.34.0
-%global storage_branch v1.57.1
+%global image_branch v5.36.0
+%global storage_branch v1.59.0
 %global shortnames_branch main
-%global common_branch v0.62.0
+%global common_branch v0.64.0
 
 %global common_version %(v=%{common_branch}; echo ${v:1})
 
 Name: containers-common
 Epoch: 5
 Version: %{common_version}
-Release: 1%{?dist}
+Release: 4%{?dist}
 License: Apache-2.0
 BuildArch: noarch
 # for BuildRequires: go-md2man
@@ -157,6 +157,9 @@ ln -s ../../../..%{_sysconfdir}/pki/entitlement %{buildroot}%{_datadir}/rhel/sec
 ln -s ../../../..%{_sysconfdir}/rhsm %{buildroot}%{_datadir}/rhel/secrets/rhsm
 ln -s ../../../..%{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/rhel/secrets/redhat.repo
 
+# Placeholder check to silence rpmlint
+%check
+
 %files
 %dir %{_sysconfdir}/containers
 %dir %{_sysconfdir}/containers/certs.d
@@ -200,6 +203,27 @@ ln -s ../../../..%{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/
 %files extra
 
 %changelog
+* Mon Aug 18 2025 Jindrich Novy <jnovy@redhat.com> - 5:0.64.0-4
+- update vendored components for 10.1
+- Related: RHEL-80817
+
+* Tue Aug 12 2025 Jindrich Novy <jnovy@redhat.com> - 5:0.63.1-3
+- remove the ugly installation hack in tests
+- Related: RHEL-80817
+
+* Mon Aug 11 2025 Jindrich Novy <jnovy@redhat.com> - 5:0.63.1-2
+- update shortnames from Pyxis
+- Related: RHEL-80817
+
+* Wed Jun 11 2025 Jindrich Novy <jnovy@redhat.com> - 5:0.63.0-1
+- update vendored components
+- Related: RHEL-80817
+
+* Sun Jun 08 2025 Lokesh Mandvekar <lsm5@redhat.com> - 5:0.62.0-2
+- fetch TMT podman revdep tests from podman dist-git
+- needs at least podman 5.4.0-7.el10
+- Related: RHEL-80817
+
 * Thu Feb 13 2025 Jindrich Novy <jnovy@redhat.com> - 5:0.62.0-1
 - update vendored components
 - Related: RHEL-58990

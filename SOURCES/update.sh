@@ -60,6 +60,7 @@ elif pwd | grep -e rhel-10 -e c10s > /dev/null
 then
 ensure registries.conf short-name-mode               \"enforcing\"
 ensure containers.conf runtime                       \"crun\"
+ensure storage.conf    enable_partial_images         \"false\"
 else
 echo "Unknown release"
 fi

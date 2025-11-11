@@ -29,6 +29,10 @@ Note, container engines also use other configuration files for configuring the e
 container images.
 * `policy.conf` for controlling which images can be pulled to the system.
 
+Note: If Podman is running in a virtual machine using `podman machine` (this
+includes Mac and Windows hosts), ensure that the configuration files are edited in the
+virtual machine by using `podman machine ssh`.
+
 ## ENVIRONMENT VARIABLES
 If the `CONTAINERS_CONF` environment variable is set, all system and user
 config files are ignored and only the specified config file will be loaded.
@@ -199,7 +203,12 @@ container. The special value “none” can be specified to disable creation of
 **env**=["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"]
 
 Environment variable list for the container process, used for passing
-environment variables to the container.
+environment variables to the container. If a variable is listed without a value,
+the value is copied from the host environment.
+
+Note that this is only used when a container is created, not with subsequent
+commands like `podman exec`. This prevents variables in the config file from
+overwriting values specified on the command line when the container was created.
 
 **env_host**=false
 
@@ -217,11 +226,10 @@ setup. Adding these internal hostnames to `/etc/hosts` is silently skipped then.
 Set this config to `none` to never add the internal hostnames to `/etc/hosts`.
 
 Note: If Podman is running in a virtual machine using `podman machine` (this
-includes Mac and Windows hosts), Podman will silently skip adding the internal
-hostnames to `/etc/hosts`, unless an IP address was configured manually. The
-internal hostnames are resolved by the gvproxy DNS resolver instead. This config
-has no effect on gvproxy. However, since `/etc/hosts` bypasses the DNS resolver,
-a manually configured IP address still takes precedence.
+includes Mac and Windows hosts), Podman resolves the `host.containers.internal`
+hostname via the podman machine (gvproxy) DNS resolver instead when it is empty.
+Also because the name will be resolved by the DNS name in gvproxy setting this
+to `none` has no effect. This option does not change the gvproxy behavior.
 
 Note: This config doesn't affect the actual network setup, it just tells Podman
 the IP address it should expect. Configuring an IP address here doesn't ensure
@@ -304,13 +312,12 @@ Specified as "type=TYPE,source=<directory-on-host>,destination=<directory-in-con
 
 Example:  [ "type=bind,source=/var/lib/foobar,destination=/var/lib/foobar,ro", ]
 
-**netns**="private"
+**netns**=""
 
 Default way to create a NET namespace for the container.
-Options are:
-  `private` Create private NET Namespace for the container.
-  `host`    Share host NET Namespace with the container.
-  `none`    Containers do not use the network.
+The option is mapped to the **--network** argument for the podman commands, it accepts the same values as that option.
+For example it can be set to `bridge`, `host`, `none`, `pasta` and more, see the [podman-create(1)](https://docs.podman.io/en/latest/markdown/podman-create.1.html#network-mode-net)
+manual for all available options.
 
 **no_hosts**=false
 
@@ -442,12 +449,17 @@ netavark_plugin_dirs = [
 
 **default_network**="podman"
 
-The network name of the default network to attach pods to.
+The name of the default network as seen in `podman network ls`. This option only effects the network assignment when
+the bridge network mode is selected, i.e. `--network bridge`. It is the default for rootful containers but not as
+rootless. To change the default network mode use the **netns** option under the `[containers]` table.
+
+Note: This should not be changed while you have any containers using this network.
 
 **default_subnet**="10.88.0.0/16"
 
 The subnet to use for the default network (named above in **default_network**).
-If the default network does not exist, it will be automatically created the first time a tool is run using this subnet.
+
+Note: This should not be changed if any containers are currently running on the default network.
 
 **default_subnet_pools**=[]
 
@@ -683,7 +695,7 @@ The default path on Windows is:
 
 Path to the OCI hooks directories for automatically executed hooks.
 
-**cdi_spec_dirs**=["/etc/cdi", ...]
+**cdi_spec_dirs**=["/etc/cdi", "/var/run/cdi", ...]
 
 Directories to scan for CDI Spec files.
 
