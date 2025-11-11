@@ -4,15 +4,15 @@
 # pick the oldest version on c/image, c/common, c/storage vendored in
 # podman/skopeo/podman.
 %global skopeo_branch main
-%global image_branch v5.34.0
-%global common_branch v0.62.0
-%global storage_branch v1.57.1
+%global image_branch v5.36.0
+%global common_branch v0.64.0
+%global storage_branch v1.59.0
 %global shortnames_branch main
 
-Epoch: 2
+Epoch: 4
 Name: containers-common
 Version: 1
-Release: 117%{?dist}
+Release: 134%{?dist}
 Summary: Common configuration and documentation for containers
 License: ASL 2.0
 ExclusiveArch: %{go_arches}
@@ -158,6 +158,9 @@ docker:
          sigstore: https://registry.redhat.io/containers/sigstore
 EOF
 
+# Placeholder check to silence rpmlint
+%check
+
 %files
 %dir %{_sysconfdir}/containers
 %dir %{_sysconfdir}/containers/certs.d
@@ -191,13 +194,30 @@ EOF
 %files extra
 
 %changelog
-* Mon Mar 03 2025 Jindrich Novy <jnovy@redhat.com> - 2:1-117
-- rebuild against the proper target
-- Resolves: RHEL-78845
+* Mon Aug 18 2025 Jindrich Novy <jnovy@redhat.com> - 4:1-134
+- update vendored components for RHEL9.7
+- Related: RHEL-80816
 
-* Wed Feb 26 2025 Jindrich Novy <jnovy@redhat.com> - 2:1-116
+* Tue Aug 12 2025 Jindrich Novy <jnovy@redhat.com> - 4:1-133
+- update shortnames and vendored components
+- Related: RHEL-80816
+
+* Wed Jun 11 2025 Jindrich Novy <jnovy@redhat.com> - 4:1-132
+- update vendored components
+- Related: RHEL-80816
+
+* Sun Jun 08 2025 Lokesh Mandvekar <lsm5@redhat.com> - 2:1-131
+- fetch TMT podman revdep tests from podman dist-git
+- needs at least podman 5.4.0-8.el9
+- Related: RHEL-80816
+
+* Mon Mar 03 2025 Jindrich Novy <jnovy@redhat.com> - 2:1-130
+- rebuild to preserve upgrade path
+- Related: RHEL-80816
+
+* Mon Feb 24 2025 Jindrich Novy <jnovy@redhat.com> - 2:1-116
 - add files section for extra subpackage
-- Resolves: RHEL-78845
+- Resolves: RHEL-80525
 
 * Mon Feb 17 2025 Jindrich Novy <jnovy@redhat.com> - 2:1-115
 - Add containers-common-extra properly
