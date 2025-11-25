@@ -17,7 +17,7 @@
 Name: containers-common
 Epoch: 5
 Version: %{common_version}
-Release: 4%{?dist}
+Release: 5%{?dist}
 License: Apache-2.0
 BuildArch: noarch
 # for BuildRequires: go-md2man
@@ -203,6 +203,10 @@ ln -s ../../../..%{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/
 %files extra
 
 %changelog
+* Thu Sep 25 2025 Jindrich Novy <jnovy@redhat.com> - 5:0.64.0-5
+- Update rhel-shortnames-overrides to include complete list of UBI/RHEL images
+- Resolves: RHEL-116621
+
 * Mon Aug 18 2025 Jindrich Novy <jnovy@redhat.com> - 5:0.64.0-4
 - update vendored components for 10.1
 - Related: RHEL-80817
