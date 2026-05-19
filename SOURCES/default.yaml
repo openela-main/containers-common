@@ -25,4 +25,3 @@ default-docker:
 #   privateregistry.com:
 #    lookaside: https://privateregistry.com/sigstore/
 #    lookaside-staging: /mnt/nfs/privateregistry/sigstore
-
