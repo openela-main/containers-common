@@ -11,7 +11,9 @@ a TOML format that can be easily modified and versioned.
 
 Container engines read the __/usr/share/containers/containers.conf__,
 __/etc/containers/containers.conf__, and __/etc/containers/containers.conf.d/\*.conf__
-for global configuration that effects all users.
+for global configuration that affects all users.
+For global configuration that only affects rootless users use __/etc/containers/containers.rootless.conf__,
+__/etc/containers/containers.rootless.d/\*.conf__ and __/etc/containers/containers.rootless.d/\$UID/\*.conf__. The UID is the user's uid which podman runs under so it can be used to specify a certain config for only a single user without having to put the config into the user's home directory.
 For user specific configuration it reads __\$XDG_CONFIG_HOME/containers/containers.conf__ and
 __\$XDG_CONFIG_HOME/containers/containers.conf.d/\*.conf__ files. When `$XDG_CONFIG_HOME` is not set it falls back to using `$HOME/.config` instead.
 
@@ -25,7 +27,7 @@ Not all options are supported in all container engines.
 Note, container engines also use other configuration files for configuring the environment.
 
 * `storage.conf` for configuration of container and images storage.
-* `registries.conf` for definition of container registries to search while pulling.
+* `registries.conf` for definition of container registries to search while pulling
 container images.
 * `policy.conf` for controlling which images can be pulled to the system.
 
@@ -294,6 +296,14 @@ the user system_u, and the role system_r.
 
 Logging driver for the container. Currently available options are k8s-file, journald, none and passthrough, with json-file aliased to k8s-file for scripting compatibility.  The journald driver is used by default if the systemd journal is readable and writable.  Otherwise, the k8s-file driver is used.
 
+**log_path**=""
+
+Default path for container logs to be stored in. When empty, logs will be stored
+in the container's default storage and removed when the container is removed.
+A subdirectory named with the container ID will be created under the specified
+path, and the log file will have the default name `ctr.log` within that directory.
+This option can be overridden by the `--log-opt` flag.
+
 **log_size_max**=-1
 
 Maximum size allowed for the container's log file. Negative numbers indicate
@@ -387,8 +397,11 @@ Sets umask inside the container.
 
 Default way to create a USER namespace for the container.
 Options are:
-  `private` Create private USER Namespace for the container.
-  `host`    Share host USER Namespace with the container.
+  `private` Create private USER Namespace for the container, without adding any UID mappings.
+  `host`    Share host USER Namespace with the container. Root in the container is mapped to the host user UID.
+  `auto`    Automatically create a USER namespace with a unique mapping.
+  `keep-id` Like `private`, but container UIDs are mapped to the host user's subordinate UIDs listed in `/etc/subuid`, and the current user's `UID:GID` are mapped to the same values in the container.
+  `no-map`  Like `keep-id`, but the current user's `UID:GID` does not map to any `UID:GID` inside the container.
 
 **utsns**="private"
 
@@ -608,9 +621,12 @@ Disabling this can save memory.
 
 **env**=[]
 
-Environment variables to be used when running the container engine (e.g., Podman, Buildah). For example "http_proxy=internal.proxy.company.com".
-Note these environment variables will not be used within the container. Set the env section under [containers] table,
+Environment variables to be used when running the container engine (e.g., Podman, Buildah). For example "MYVAR=value".
+These environment variables will not be used within the container. Set the env section under the [containers] table,
 if you want to set environment variables for the container.
+
+Note when using this to set http proxy variables then they might get leaked into the container depending on
+if `http_proxy` (under the [containers] table) is set to to true (default) or false.
 
 **events_logfile_path**=""
 
@@ -919,10 +935,29 @@ URI to access the Podman service
 - **rootless remote** - ssh://user@engineering.lab.company.com/run/user/1000/podman/podman.sock
 - **rootful local**  - unix:///run/podman/podman.sock
 - **rootful remote** - ssh://root@10.10.1.136:22/run/podman/podman.sock
+- **tcp/tls remote** - tcp://10.10.1.136:9443
 
 **identity="~/.ssh/id_rsa**
 
 Path to file containing ssh identity key
+
+**tls_cert="/path/to/certs/podman/tls.crt"**
+
+Path to PEM file containing TLS client certificate
+
+**tls_key="/path/to/certs/podman/tls.key"**
+
+Path to PEM file containing TLS client certificate private key
+
+**tls_ca="/path/to/certs/podman/ca.crt"**
+
+Path to PEM file containing TLS certificate authority (CA) bundle
+
+**[engine.runtimes_flags]**
+
+Lists of default runtime flags for each valid OCI runtime (crun, runc, kata, runsc, krun, etc).
+
+To list the supported flags, please consult the documentation of the selected container runtime.
 
 **[engine.volume_plugins]**
 

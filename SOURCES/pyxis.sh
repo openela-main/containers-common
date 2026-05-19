@@ -28,6 +28,7 @@ while [ $IDX -lt ${#lines[@]} ]; do
      [ "$REPOSITORY" != \"\" ] &&
      [[ $REPOSITORY != *[@:]* ]] &&
      [[ $REPOSITORY != *[* ]] &&
+     ! [[ ${REPOSITORY%%/*} == *.* ]] &&
      [[ $REGISTRY == *.* ]] &&
      [ "$REGISTRY" != "non_registry" ]; then
     if [[ $REGISTRY == *quay.io* ]] ||

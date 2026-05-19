@@ -6,18 +6,15 @@
 
 # Packit will automatically update the image and storage versions on Fedora and
 # CentOS Stream dist-git PRs.
-%global skopeo_branch main
-%global image_branch v5.36.0
-%global storage_branch v1.59.0
-%global shortnames_branch main
-%global common_branch v0.64.0
+%global container_libs_branch podman-5.8
+%global container_libs_url https://raw.githubusercontent.com/containers/container-libs/refs/heads/%{container_libs_branch}
 
-%global common_version %(v=%{common_branch}; echo ${v:1})
+%global container_libs_version %(v=%{container_libs_branch}; echo ${v:7})
 
 Name: containers-common
-Epoch: 5
-Version: %{common_version}
-Release: 5%{?dist}
+Epoch: 6
+Version: %{container_libs_version}
+Release: 2%{?dist}
 License: Apache-2.0
 BuildArch: noarch
 # for BuildRequires: go-md2man
@@ -34,41 +31,38 @@ Suggests: fuse-overlayfs
 Requires: /etc/pki/sigstore/REKOR-signing-key
 Requires: /etc/pki/sigstore/SIGSTORE-redhat-release3
 %endif
-URL: https://github.com/containers/common
-Source1: https://raw.githubusercontent.com/containers/storage/%{storage_branch}/storage.conf
-Source2: https://raw.githubusercontent.com/containers/storage/%{storage_branch}/docs/containers-storage.conf.5.md
-Source3: mounts.conf
-Source4: https://raw.githubusercontent.com/containers/image/%{image_branch}/docs/containers-registries.conf.5.md
-Source5: https://raw.githubusercontent.com/containers/image/%{image_branch}/registries.conf
-Source6: https://raw.githubusercontent.com/containers/image/%{image_branch}/docs/containers-policy.json.5.md
-Source7: https://raw.githubusercontent.com/containers/common/%{common_branch}/pkg/seccomp/seccomp.json
-Source8: https://raw.githubusercontent.com/containers/common/%{common_branch}/docs/containers-mounts.conf.5.md
-Source9: https://raw.githubusercontent.com/containers/image/%{image_branch}/docs/containers-signature.5.md
-Source10: https://raw.githubusercontent.com/containers/image/%{image_branch}/docs/containers-transports.5.md
-Source11: https://raw.githubusercontent.com/containers/image/%{image_branch}/docs/containers-certs.d.5.md
-Source12: https://raw.githubusercontent.com/containers/image/%{image_branch}/docs/containers-registries.d.5.md
-Source13: https://raw.githubusercontent.com/containers/common/%{common_branch}/pkg/config/containers.conf
-Source14: https://raw.githubusercontent.com/containers/common/%{common_branch}/docs/containers.conf.5.md
-Source15: https://raw.githubusercontent.com/containers/image/%{image_branch}/docs/containers-auth.json.5.md
-Source16: https://raw.githubusercontent.com/containers/image/%{image_branch}/docs/containers-registries.conf.d.5.md
-Source17: https://raw.githubusercontent.com/containers/shortnames/%{shortnames_branch}/shortnames.conf
-Source18: https://raw.githubusercontent.com/containers/common/refs/heads/main/pkg/hooks/docs/oci-hooks.5.md
+URL: https://github.com/containers/container-libs/
+Source1: %{container_libs_url}/storage/storage.conf
+Source2: %{container_libs_url}/storage/docs/containers-storage.conf.5.md
+Source3: %{container_libs_url}/common/pkg/subscriptions/mounts.conf
+Source4: %{container_libs_url}/image/docs/containers-registries.conf.5.md
+Source5: %{container_libs_url}/image/registries.conf
+Source6: %{container_libs_url}/image/docs/containers-policy.json.5.md
+Source7: %{container_libs_url}/common/pkg/seccomp/seccomp.json
+Source8: %{container_libs_url}/common/docs/containers-mounts.conf.5.md
+Source9: %{container_libs_url}/image/docs/containers-signature.5.md
+Source10: %{container_libs_url}/image/docs/containers-transports.5.md
+Source11: %{container_libs_url}/image/docs/containers-certs.d.5.md
+Source12: %{container_libs_url}/image/docs/containers-registries.d.5.md
+Source13: %{container_libs_url}/common/pkg/config/containers.conf
+Source14: %{container_libs_url}/common/docs/containers.conf.5.md
+Source15: %{container_libs_url}/image/docs/containers-auth.json.5.md
+Source16: %{container_libs_url}/image/docs/containers-registries.conf.d.5.md
+Source17: https://raw.githubusercontent.com/containers/shortnames/refs/heads/main/shortnames.conf
+Source18: %{container_libs_url}/common/pkg/hooks/docs/oci-hooks.5.md
 Source19: 001-rhel-shortnames-pyxis.conf
 Source20: 002-rhel-shortnames-overrides.conf
 Source22: registry.access.redhat.com.yaml
 Source23: registry.redhat.io.yaml
-#Source24: https://raw.githubusercontent.com/containers/skopeo/%%{skopeo_branch}/default-policy.json
 Source24: default-policy.json
-Source25: https://raw.githubusercontent.com/containers/skopeo/%{skopeo_branch}/default.yaml
-# FIXME: fix the branch once these are available via regular c/common branch
-Source26: https://raw.githubusercontent.com/containers/common/main/docs/Containerfile.5.md
-Source27: https://raw.githubusercontent.com/containers/common/main/docs/containerignore.5.md
+Source25: %{container_libs_url}/image//default.yaml
+Source26: %{container_libs_url}/common/docs/Containerfile.5.md
+Source27: %{container_libs_url}/common/docs/containerignore.5.md
 Source29: REKOR-signing-key
 Source30: SIGSTORE-redhat-release3
 
 # scripts used for synchronization with upstream and shortname generation
 Source100: update.sh
-Source101: update-vendored.sh
 Source102: pyxis.sh
 
 %description
@@ -203,9 +197,21 @@ ln -s ../../../..%{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/
 %files extra
 
 %changelog
+* Sat Feb 14 2026 Jindrich Novy <jnovy@redhat.com> - 6:5.8-2
+- Convert to unified source - container-libs
+- Related: RHEL-111917
+
+* Thu Feb 05 2026 Jindrich Novy <jnovy@redhat.com> - 5:0.64.2-7
+- do not allow the shortname to contain registry
+- Resolves: RHEL-147179
+
+* Thu Feb 05 2026 Jindrich Novy <jnovy@redhat.com> - 5:0.64.2-6
+- update shortnames and vendored components for RHEL-10.2
+- Resolves: RHEL-146877
+
 * Thu Sep 25 2025 Jindrich Novy <jnovy@redhat.com> - 5:0.64.0-5
 - Update rhel-shortnames-overrides to include complete list of UBI/RHEL images
-- Resolves: RHEL-116621
+- Related: RHEL-111917
 
 * Mon Aug 18 2025 Jindrich Novy <jnovy@redhat.com> - 5:0.64.0-4
 - update vendored components for 10.1

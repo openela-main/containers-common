@@ -71,7 +71,7 @@ fi
 				"socket",' seccomp.json
 rhpkg clone redhat-release
 cd redhat-release
-rhpkg switch-branch rhel-10.0
+rhpkg switch-branch rhel-10.1
 rhpkg prep
 cp -f redhat-release-*/redhat-release-*/REKOR-signing-key ../
 cp -f redhat-release-*/redhat-release-*/SIGSTORE-redhat-release3 ../
