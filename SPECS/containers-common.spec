@@ -6,7 +6,7 @@
 Name: containers-common
 Epoch: 5
 Version: %{container_libs_version}
-Release: 1%{?dist}
+Release: 2%{?dist}
 Summary: Common configuration and documentation for containers
 License: ASL 2.0
 ExclusiveArch: %{go_arches}
@@ -174,6 +174,10 @@ ln -s ../../../..%{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/
 %files extra
 
 %changelog
+* Mon Jul 20 2026 Jindrich Novy <jnovy@redhat.com> - 5:5.8-2
+- update vendored components from container-libs podman-5.8 branch
+- Resolves: RHEL-212598
+
 * Mon Feb 16 2026 Jindrich Novy <jnovy@redhat.com> - 5:5.8-1
 - convert to container_libs
 - Related: RHEL-111919
