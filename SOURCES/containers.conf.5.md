@@ -9,18 +9,28 @@ Container engines like Podman & Buildah read containers.conf file, if it exists
 and modify the defaults for running containers on the host. containers.conf uses
 a TOML format that can be easily modified and versioned.
 
-Container engines read the __/usr/share/containers/containers.conf__,
-__/etc/containers/containers.conf__, and __/etc/containers/containers.conf.d/\*.conf__
-for global configuration that affects all users.
-For global configuration that only affects rootless users use __/etc/containers/containers.rootless.conf__,
-__/etc/containers/containers.rootless.d/\*.conf__ and __/etc/containers/containers.rootless.d/\$UID/\*.conf__. The UID is the user's uid which podman runs under so it can be used to specify a certain config for only a single user without having to put the config into the user's home directory.
-For user specific configuration it reads __\$XDG_CONFIG_HOME/containers/containers.conf__ and
-__\$XDG_CONFIG_HOME/containers/containers.conf.d/\*.conf__ files. When `$XDG_CONFIG_HOME` is not set it falls back to using `$HOME/.config` instead.
+By default, the configuration is read from `$XDG_CONFIG_HOME/containers/containers.conf` (or from `$HOME/.config/containers/containers.conf` if `$XDG_CONFIG_HOME` is unset), if it exists; otherwise from `/etc/containers/containers.conf`;  otherwise from `/usr/share/containers/containers.conf`.
+
+In addition to containers.conf, drop-in files using the same format from the following directories are also read:
+ - `$XDG_CONFIG_HOME/containers/containers.conf.d` (or from `$HOME/.config/containers/containers.conf.d` if `$XDG_CONFIG_HOME` is unset)
+ - `/etc/containers/containers.rootful.conf.d` (only when running as uid 0)
+ - `/etc/containers/containers.rootless.conf.d/$UID` (only when running as uid > 0)
+ - `/etc/containers/containers.rootless.conf.d` (only when running as uid > 0)
+ - `/etc/containers/containers.conf.d`
+ - `/usr/share/containers/containers.rootful.conf.d` (only when running as uid 0)
+ - `/usr/share/containers/containers.rootless.conf.d/$UID` (only when running as uid > 0)
+ - `/usr/share/containers/containers.rootless.conf.d` (only when running as uid > 0)
+ - `/usr/share/containers/containers.conf.d`
+
+The files must be using the `.conf` suffix, directories or files with other suffixes will be ignored.
+All files from these paths will be first collected and then sorted in alpha-numerical order.
+If the same filename is used twice then only the first match from the directory list above is
+used. Then the files will be parsed in the sorted order.
 
 Fields specified in containers conf override the default options, as well as
 options in previously read containers.conf files.
 
-Config files in the `.d` directories, are added in alpha numeric sorted order and must end in `.conf`.
+See **containers-config(5)** for a more detailed description on how the files are loaded.
 
 Not all options are supported in all container engines.
 
@@ -418,33 +428,13 @@ Specified as "directory-on-host:directory-in-container:options".
 Example:  "/db:/var/lib/db:ro".
 
 ## NETWORK TABLE
-The `network` table contains settings pertaining to the management of CNI
-plugins.
+The `network` table contains settings pertaining to the management of container
+networks.
 
 **network_backend**=""
 
 Network backend determines what network driver will be used to set up and tear down container networks.
-Valid values are "cni" and "netavark".
-The default value is empty which means that it will automatically choose CNI or netavark. If there are
-already containers/images or CNI networks preset it will choose CNI.
-
-Before changing this value all containers must be stopped otherwise it is likely that
-iptables rules and network interfaces might leak on the host. A reboot will fix this.
-
-**cni_plugin_dirs**=[]
-
-List of paths to directories where CNI plugin binaries are located.
-
-The default list is:
-```
-cni_plugin_dirs = [
-  "/usr/local/libexec/cni",
-  "/usr/libexec/cni",
-  "/usr/local/lib/cni",
-  "/usr/lib/cni",
-  "/opt/cni/bin",
-]
-```
+The only supported value is "netavark". An empty string defaults to "netavark".
 
 **netavark_plugin_dirs**=[]
 
@@ -495,22 +485,32 @@ default_subnet_pools = [
 
 **default_rootless_network_cmd**="pasta"
 
-Configure which rootless network program to use by default. Valid options are
-`slirp4netns` and `pasta` (default).
+Configure which rootless network program to use by default. The only valid option is `pasta` (default).
 
-**network_config_dir**="/etc/cni/net.d/"
+**rootless_port_forwarder**="rootlessport"
+
+Select the port forwarding mechanism for rootless bridge networks.
+Valid options are `rootlessport` (default) and `pasta`.
+`rootlessport` uses a userspace TCP/UDP proxy.
+`pasta` uses pasta's control socket to add port forwarding rules via kernel splice,
+which preserves the original source IP address inside the container.
+The `pasta` option is **experimental** and subject to change.
+
+**Important:** This option must only be changed when no containers are running.
+Switching while containers are active leads to port-forwarding rules being leaked
+or cleanup failures because the running netns was created with the previous setting.
+
+**network_config_dir**="/etc/containers/networks"
 
 Path to the directory where network configuration files are located.
-For the CNI backend the default is __/etc/cni/net.d__ as root
-and __$HOME/.config/cni/net.d__ as rootless.
-For the netavark backend "/etc/containers/networks" is used as root
+The default is "/etc/containers/networks" as root
 and "$graphroot/networks" as rootless.
 
 **firewall_driver**=""
 
 The firewall driver to be used by netavark.
 The default is empty which means netavark will pick one accordingly. Current supported
-drivers are "iptables", "nftables", "none" (no firewall rules will be created) and "firewalld" (firewalld is
+drivers are "nftables", "none" (no firewall rules will be created) and "firewalld" (firewalld is
 experimental at the moment and not recommend outside of testing).
 
 **dns_bind_port**=53
@@ -524,6 +524,17 @@ run on the machine.
 
 A list of default pasta options that should be used running pasta.
 It accepts the pasta cli options, see pasta(1) for the full list of options.
+
+**default_host_ips**=[]
+
+The default host IPs to bind published container ports to when no host IP
+is explicitly specified in the `-p` flag (e.g., `-p 8000:8000`). If empty, the default
+behavior is to bind to all network interfaces (`0.0.0.0` for IPv4 and `::` for IPv6). If multiple IPs are specified,
+separate port mapping for each of the specified IP would be created. For instance, setting
+this to `["127.0.0.1", "::1"]` and port specified as `-p 8080:80` will result into two
+port mappings in podman, `127.0.0.1:8080:80` and `[::1]:8080:80`.
+Note that explicitly specifying a host IP in the `-p` flag (e.g., `-p 192.168.1.10:8000:8000`)
+will always override this default.
 
 ## ENGINE TABLE
 The `engine` table contains configuration options used to set up container engines such as Podman and Buildah.
@@ -591,15 +602,6 @@ conmon_path=[
     "/run/current-system/sw/bin/conmon",
 ]
 ```
-
-**database_backend**=""
-
-The database backend of Podman.  Supported values are "" (default), "boltdb"
-and "sqlite". An empty value means it will check whenever a boltdb already
-exists and use it when it does, otherwise it will use sqlite as default
-(e.g. new installs). This allows for backwards compatibility with older versions.
-Please run `podman-system-reset` prior to changing the database
-backend of an existing deployment, to make sure Podman can operate correctly.
 
 **detach_keys**="ctrl-p,ctrl-q"
 
@@ -678,7 +680,6 @@ The following binaries are searched in these directories:
  - catatonit
  - netavark
  - pasta
- - slirp4netns
 
 Podman machine uses it for these binaries:
  - gvproxy
@@ -778,28 +779,6 @@ only containers and pods that were created in the same namespace, and will
 create new containers and pods in that namespace. The default namespace is "",
 which corresponds to no namespace. When no namespace is set, all containers
 and pods are visible.
-
-**network_cmd_path**=""
-
-Path to the slirp4netns binary.
-
-**network_cmd_options**=[]
-
-Default options to pass to the slirp4netns binary.
-
-Valid options values are:
-
-  - **allow_host_loopback=true|false**: Allow the slirp4netns to reach the host loopback IP (`10.0.2.2`). Default is false.
-  - **mtu=MTU**: Specify the MTU to use for this network. (Default is `65520`).
-  - **cidr=CIDR**: Specify ip range to use for this network. (Default is `10.0.2.0/24`).
-  - **enable_ipv6=true|false**: Enable IPv6. Default is true. (Required for `outbound_addr6`).
-  - **outbound_addr=INTERFACE**: Specify the outbound interface slirp should bind to (ipv4 traffic only).
-  - **outbound_addr=IPv4**: Specify the outbound ipv4 address slirp should bind to.
-  - **outbound_addr6=INTERFACE**: Specify the outbound interface slirp should bind to (ipv6 traffic only).
-  - **outbound_addr6=IPv6**: Specify the outbound ipv6 address slirp should bind to.
-  - **port_handler=rootlesskit**: Use rootlesskit for port forwarding. Default.
-  Note: Rootlesskit changes the source IP address of incoming packets to a IP address in the container network namespace, usually `10.0.2.100`. If your application requires the real source IP address, e.g. web server logs, use the slirp4netns port handler. The rootlesskit port handler is also used for rootless containers when connected to user-defined networks.
-  - **port_handler=slirp4netns**: Use the slirp4netns port forwarding, it is slower than rootlesskit but preserves the correct source IP address. This port handler cannot be used for user-defined networks.
 
 **no_pivot_root**=false
 
@@ -995,7 +974,7 @@ Number of CPU's a machine is created with.
 
 The size of the disk in GB created when init-ing a podman-machine VM
 
-**image**=""
+**image**="docker://quay.io/podman/machine-os"
 
 Image used when creating a new VM using `podman machine init`.
 Can be specified as a registry with a bootable OCI artifact, download URL, or a local path.
@@ -1034,13 +1013,20 @@ is interpreted as the default provider for the current host OS.
 | -------- | --------------------------------------- | -------- |
 | Linux    | "" (qemu)                               | None     |
 | Windows  | "" ("wsl": Windows Subsystem for Linux) | "hyperv" (Windows Server Virtualization) |
-| Mac      | "" ("applehv": Apple Hypervisor)        | "libkrun" (Launch machine via libkrun platform, optimized for sharing GPU with the machine) |
+| Mac      | "" ("libkrun": Launch machine via libkrun platform, optimized for sharing GPU with the machine) | "applehv" (Apple Hypervisor) |
 
 
-**rosetta**="true"
+**rosetta**=false
 
 Rosetta supports running x86_64 Linux binaries on a Podman machine on Apple silicon.
-The default value is `true`. Supported on AppleHV(arm64) machines only.
+The default value is `false`. Supported on AppleHV(arm64) machines only.
+
+**import_native_ca**=false
+
+Import the host's trusted CA certificates into the machine.
+When set to true, the certificates from the host system are imported during machine startup.
+This allows containers running in the machine to trust the same Certificate Authorities
+as the host OS. The default value is `false`.
 
 ## FARMS TABLE
 The `farms` table contains configuration options used to group up remote connections into farms that will be used when sending out builds to different machines in a farm via `podman buildfarm`.
@@ -1071,33 +1057,7 @@ The default value is `podmansh`.
 Number of seconds to wait for podmansh logins. This value if favoured over the deprecated field `engine.podmansh_timeout` if set.
 The default value is 30.
 
-
-# FILES
-
-**containers.conf**
-
-Distributions often provide a __/usr/share/containers/containers.conf__ file to
-provide a default configuration. Administrators can override fields in this
-file by creating __/etc/containers/containers.conf__ to specify their own
-configuration. They may also drop `.conf` files in
-__/etc/containers/containers.conf.d__ which will be loaded in alphanumeric order.
-For user specific configuration it reads __\$XDG_CONFIG_HOME/containers/containers.conf__ and
-__\$XDG_CONFIG_HOME/containers/containers.conf.d/\*.conf__ files. When `$XDG_CONFIG_HOME` is not set it falls back to using `$HOME/.config` instead.
-
-Fields specified in a containers.conf file override the default options, as
-well as options in previously loaded containers.conf files.
-
-**storage.conf**
-
-The `/etc/containers/storage.conf` file is the default storage configuration file.
-Rootless users can override fields in the storage config by creating
-__$HOME/.config/containers/storage.conf__.
-
-If the `CONTAINERS_STORAGE_CONF` path environment variable is set, this path
-is used for the storage.conf file rather than the default.
-This is primarily used for testing.
-
 # SEE ALSO
-containers-storage.conf(5), containers-policy.json(5), containers-registries.conf(5), tmpfiles.d(5)
+containers-config(5), containers-storage.conf(5), containers-policy.json(5), containers-registries.conf(5), tmpfiles.d(5)
 
 [toml]: https://github.com/toml-lang/toml

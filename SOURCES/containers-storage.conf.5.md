@@ -1,9 +1,7 @@
-% containers-storage.conf(5) Container Storage Configuration File
-% Dan Walsh
-% May 2017
+# containers-storage.conf 5 "May 2017"
 
-# NAME
-storage.conf - Syntax of Container Storage configuration file
+## NAME
+containers-storage.conf - Syntax of Container Storage configuration file
 
 ## DESCRIPTION
 The STORAGE configuration file specifies all of the available container storage options for tools using shared container storage, but in a TOML format that can be more easily modified and versioned.
@@ -28,15 +26,12 @@ The `storage` table supports the following options:
 
 **driver**=""
   Copy On Write (COW) container storage driver. Valid drivers are "overlay", "vfs", "btrfs", and "zfs". Some drivers (for example, "zfs" and "btrfs") may not work if your kernel lacks support for the filesystem.
-This field is required to guarantee proper operation.
 Valid rootless drivers are "btrfs", "overlay", and "vfs".
-Rootless users default to the driver defined in the system configuration when possible.
-When the system configuration uses an unsupported rootless driver, rootless users default to "overlay" if available, otherwise "vfs".
 
 **graphroot**=""
-  container storage graph dir (default: "/var/lib/containers/storage")
+  container storage graph dir (default: `/var/lib/containers/storage` or as rootless `$XDG_DATA_HOME/containers/storage`/`$HOME/.local/share/containers/storage` depending on if `$XDG_DATA_HOME` is set)
 Default directory to store all writable content created by container storage programs.
-The rootless graphroot path supports environment variable substitutions (ie. `$HOME/containers/storage`).
+The graphroot path supports environment variable substitutions (ie. `$HOME/containers/storage`).
 When changing the graphroot location on an SELINUX system, ensure the labeling matches the default locations labels with the following commands:
 
 ```
@@ -50,10 +45,9 @@ In rootless mode you would set
 # semanage fcontext -a -e $HOME/.local/share/containers NEWSTORAGEPATH
 $ restorecon -R -v /NEWSTORAGEPATH
 ```
-**rootless_storage_path**="$HOME/.local/share/containers/storage"
-  Storage path for rootless users. By default the graphroot for rootless users is set to `$XDG_DATA_HOME/containers/storage`, if XDG_DATA_HOME is set. Otherwise `$HOME/.local/share/containers/storage` is used. This field can be used if administrators need to change the storage location for all users. The rootless storage path supports environment variable substitutions (ie. `$HOME/containers/storage`)
 
-A common use case for this field is to provide a local storage directory when user home directories are NFS-mounted (podman does not support container storage over NFS).
+**rootless_storage_path**=""
+  Deprecated, use **graphroot** instead. To switch the paths for all the rootless users, put the config file with **graphroot** under the `storage.rootless.conf.d/` directory.
 
 **imagestore**=""
  The image storage path (the default is assumed to be the same as `graphroot`). Path of the imagestore, which is different from `graphroot`. By default, images in the storage library are stored in the `graphroot`. If `imagestore` is provided, newly pulled images will be stored in the `imagestore` location. All other storage continues to be stored in the `graphroot`. When using the `overlay` driver, images previously stored in the `graphroot` remain accessible. Internally, the storage library mounts `graphroot` as an `additionalImageStore` to allow this behavior.
@@ -63,8 +57,8 @@ A common use case for the `imagestore` field is users who need to split filesyst
 Imagestore, if set, must be different from `graphroot`.
 
 **runroot**=""
-  container storage run dir (default: "/run/containers/storage")
-Default directory to store all temporary writable content created by container storage programs. The rootless runroot path supports environment variable substitutions (ie. `$HOME/containers/storage`)
+  container storage run dir (default: `/run/containers/storage` or as rootless `$XDG_RUNTIME_DIR/containers`/`/tmp/storage-run-$UID/containers` depending on if $XDG_RUNTIME_DIR is set)
+Default directory to store all temporary writable content created by container storage programs. This path should be on a tmpfs. The path supports environment variable substitutions (ie. `$HOME/containers/storage`).
 
 **driver_priority**=[]
   Priority list for the storage drivers that will be tested one after the other to pick the storage driver if it is not defined. The first storage driver in this list that can be used, will be picked as the new one and all subsequent ones will not be tried. If all drivers in this list are not viable, then **all** known drivers will be tried and the first working one will be picked.
@@ -221,6 +215,16 @@ based file systems.
     Use ComposeFS to mount the data layers image.  ComposeFS support is experimental and not recommended for production use.
     This is a "string bool": "false"|"true" (cannot be native TOML boolean)
 
+**sync**="none|filesystem"
+  Filesystem synchronization mode for layer creation. (default: "none")
+
+- `none`: No synchronization.
+  Layer operations complete without calling syncfs().
+
+- `filesystem`: Sync before completion.
+  Flush all pending writes to the file system before marking the layer
+  as present.  This helps prevent data corruption if the system
+  crashes or loses power during layer operations.
 
 ### STORAGE OPTIONS FOR VFS TABLE
 
@@ -230,6 +234,16 @@ The `storage.options.vfs` table supports the following options:
   ignore_chown_errors can be set to allow a non privileged user running with a  single UID within a user namespace to run containers. The user can pull and use any image even those with multiple uids.  Note multiple UIDs will be squashed down to the default uid in the container.  These images will have no separation between the users in the container.
   This is a "string bool": "false"|"true" (cannot be native TOML boolean)
 
+**sync**="none|filesystem"
+  Filesystem synchronization mode for layer creation. (default: "none")
+
+- `none`: No synchronization.
+  Layer operations complete without calling syncfs().
+
+- `filesystem`: Sync before completion.
+  Flush all pending writes to the file system before marking the layer
+  as present.  This helps prevent data corruption if the system
+  crashes or loses power during layer operations.
 
 ### STORAGE OPTIONS FOR ZFS TABLE
 
@@ -297,17 +311,30 @@ This is a way to prevent xfs_quota management from conflicting with containers/s
 
 ## FILES
 
-Distributions often provide a `/usr/share/containers/storage.conf` file to define default storage configuration. Administrators can override this file by creating `/etc/containers/storage.conf` to specify their own configuration. Likewise rootless users can create a storage.conf file to override the system storage.conf files. Files should be stored in the `$XDG_CONFIG_HOME/containers/storage.conf` file.  If `$XDG_CONFIG_HOME` is not set then the file `$HOME/.config/containers/storage.conf` is used.
+The following search locations are used:
 
-Note: The storage.conf file overrides all other storage.conf files. Container
-engines run by users with a storage.conf file in their home directory do not
-use options in the system storage.conf files.
+- `/usr/share/containers/storage.conf`
+- `/usr/share/containers/storage.conf.d/`
+- `/usr/share/containers/storage.rootful.conf.d/` (only when UID == 0)
+- `/usr/share/containers/storage.rootless.conf.d/` (only when UID > 0)
+- `/usr/share/containers/storage.rootless.conf.d/<UID>/` (only when UID > 0)
+
+- `/etc/containers/storage.conf`
+- `/etc/containers/storage.conf.d/`
+- `/etc/containers/storage.rootful.conf.d/` (only when UID == 0)
+- `/etc/containers/storage.rootless.conf.d/` (only when UID > 0)
+- `/etc/containers/storage.rootless.conf.d/<UID>/` (only when UID > 0)
+
+- `$XDG_CONFIG_HOME/containers/storage.conf` or if `$XDG_CONFIG_HOME` is unset then `$HOME/.config/containers/storage.conf`
+- `$XDG_CONFIG_HOME/containers/storage.conf.d/` or if `$XDG_CONFIG_HOME` is unset then `$HOME/.config/containers/storage.conf.d/`
+
+See **containers-config(5)** for a more detailed description on how the files are loaded.
 
 /etc/projects - XFS persistent project root definition
 /etc/projid -  XFS project name mapping file
 
 ## SEE ALSO
-`semanage(8)`, `restorecon(8)`, `mount(8)`, `fuse-overlayfs(1)`, `xfs_quota(8)`, `projects(5)`, `projid(5)`
+**containers-config(5)**, **semanage(8)**, **restorecon(8)**, **mount(8)**, **fuse-overlayfs(1)**, **xfs_quota(8)**, **projects(5)**, **projid(5)**
 
 ## HISTORY
 May 2017, Originally compiled by Dan Walsh <dwalsh@redhat.com>

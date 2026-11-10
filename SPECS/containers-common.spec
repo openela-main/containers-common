@@ -6,15 +6,16 @@
 
 # Packit will automatically update the image and storage versions on Fedora and
 # CentOS Stream dist-git PRs.
-%global container_libs_branch podman-5.8
+%global container_libs_branch main
 %global container_libs_url https://raw.githubusercontent.com/containers/container-libs/refs/heads/%{container_libs_branch}
 
-%global container_libs_version %(v=%{container_libs_branch}; echo ${v:7})
+%global container_libs_version 6.0
+#%%global container_libs_version %(v=%{container_libs_branch}; echo ${v:7})
 
 Name: containers-common
 Epoch: 6
 Version: %{container_libs_version}
-Release: 2%{?dist}
+Release: 3%{?dist}
 License: Apache-2.0
 BuildArch: noarch
 # for BuildRequires: go-md2man
@@ -25,8 +26,11 @@ BuildRequires: go-md2man
 Provides: skopeo-containers = %{epoch}:%{version}-%{release}
 Requires: (container-selinux >= 2:2.162.1 if selinux-policy)
 Requires: netavark
-Obsoletes: containernetworking-plugins < 2
 Suggests: fuse-overlayfs
+# Conflict versions using the old config file loading to avoid mismatch between code and configs.
+Conflicts: podman < 5:6
+Conflicts: buildah < 2:1.44
+Conflicts: skopeo < 1:1.23
 %if 0%{?rhel}
 Requires: /etc/pki/sigstore/REKOR-signing-key
 Requires: /etc/pki/sigstore/SIGSTORE-redhat-release3
@@ -34,7 +38,7 @@ Requires: /etc/pki/sigstore/SIGSTORE-redhat-release3
 URL: https://github.com/containers/container-libs/
 Source1: %{container_libs_url}/storage/storage.conf
 Source2: %{container_libs_url}/storage/docs/containers-storage.conf.5.md
-Source3: %{container_libs_url}/common/pkg/subscriptions/mounts.conf
+Source3: %{container_libs_url}/common/contrib/redhat/mounts.conf
 Source4: %{container_libs_url}/image/docs/containers-registries.conf.5.md
 Source5: %{container_libs_url}/image/registries.conf
 Source6: %{container_libs_url}/image/docs/containers-policy.json.5.md
@@ -47,7 +51,7 @@ Source12: %{container_libs_url}/image/docs/containers-registries.d.5.md
 Source13: %{container_libs_url}/common/pkg/config/containers.conf
 Source14: %{container_libs_url}/common/docs/containers.conf.5.md
 Source15: %{container_libs_url}/image/docs/containers-auth.json.5.md
-Source16: %{container_libs_url}/image/docs/containers-registries.conf.d.5.md
+Source16: %{container_libs_url}/image/docs/containers-registries.conf.d.5
 Source17: https://raw.githubusercontent.com/containers/shortnames/refs/heads/main/shortnames.conf
 Source18: %{container_libs_url}/common/pkg/hooks/docs/oci-hooks.5.md
 Source19: 001-rhel-shortnames-pyxis.conf
@@ -60,6 +64,11 @@ Source26: %{container_libs_url}/common/docs/Containerfile.5.md
 Source27: %{container_libs_url}/common/docs/containerignore.5.md
 Source29: REKOR-signing-key
 Source30: SIGSTORE-redhat-release3
+Source31: %{container_libs_url}/common/rpm/00-containers.conf
+Source32: %{container_libs_url}/common/rpm/00-storage.conf
+Source33: %{container_libs_url}/common/rpm/00-storage-rootful.conf
+Source34: %{container_libs_url}/common/rpm/00-rhel-registries.conf
+Source35: %{container_libs_url}/common/rpm/00-storage-rootless.conf
 
 # scripts used for synchronization with upstream and shortname generation
 Source100: update.sh
@@ -90,7 +99,7 @@ not required by Skopeo.
 %build
 
 %install
-install -dp %{buildroot}%{_sysconfdir}/containers/{certs.d,oci/hooks.d,systemd,registries.d,registries.conf.d}
+install -dp %{buildroot}%{_sysconfdir}/containers/{certs.d,oci/hooks.d,networks,systemd,registries.conf.d,registries.d}
 install -dp %{buildroot}%{_datadir}/containers/systemd
 install -dp %{buildroot}%{_sharedstatedir}/containers/sigstore
 install -dp %{buildroot}%{_prefix}/lib/containers/storage
@@ -100,19 +109,25 @@ install -dp -m 700 %{buildroot}%{_prefix}/lib/containers/storage/overlay-layers
 touch %{buildroot}%{_prefix}/lib/containers/storage/overlay-layers/layers.lock
 
 install -m0644 %{SOURCE1} %{buildroot}%{_datadir}/containers/storage.conf
-install -m0644 %{SOURCE5} %{buildroot}%{_sysconfdir}/containers/registries.conf
-install -m0644 %{SOURCE17} %{buildroot}%{_sysconfdir}/containers/registries.conf.d/000-shortnames.conf
+install -m0644 %{SOURCE5} %{buildroot}%{_datadir}/containers/registries.conf
+install -Dp -m0644 %{SOURCE17} %{buildroot}%{_datadir}/containers/registries.conf.d/000-shortnames.conf
 %if 0%{?fedora} == 0 && 0%{?centos} == 0
-    install -m0644 %{SOURCE19} %{buildroot}%{_sysconfdir}/containers/registries.conf.d/001-rhel-shortnames.conf
-    install -m0644 %{SOURCE20} %{buildroot}%{_sysconfdir}/containers/registries.conf.d/002-rhel-shortnames-overrides.conf
+    install -m0644 %{SOURCE19} %{buildroot}%{_datadir}/containers/registries.conf.d/001-rhel-shortnames.conf
+    install -m0644 %{SOURCE20} %{buildroot}%{_datadir}/containers/registries.conf.d/002-rhel-shortnames-overrides.conf
 %endif
 
-install -dp %{buildroot}%{_sysconfdir}/containers/registries.d
-install -m0644 %{SOURCE22} %{buildroot}%{_sysconfdir}/containers/registries.d
-install -m0644 %{SOURCE23} %{buildroot}%{_sysconfdir}/containers/registries.d
-install -m0644 %{SOURCE24} %{buildroot}%{_sysconfdir}/containers/policy.json
+install -Dp -m0644 %{SOURCE24} %{buildroot}%{_datadir}/containers/policy.json
+install -Dp -m0644 %{SOURCE25} %{buildroot}%{_datadir}/containers/registries.d/default.yaml
+install -Dp -m0644 %{SOURCE22} %{buildroot}%{_datadir}/containers/registries.d/registry.access.redhat.com.yaml
+install -Dp -m0644 %{SOURCE23} %{buildroot}%{_datadir}/containers/registries.d/registry.redhat.io.yaml
 install -dp %{buildroot}%{_sharedstatedir}/containers/sigstore
-install -m0644 %{SOURCE25} %{buildroot}%{_sysconfdir}/containers/registries.d/default.yaml
+
+# install custom vendor overwrites
+install -Dp -m0644 %{SOURCE31} %{buildroot}%{_datadir}/containers/containers.conf.d/00-vendor.conf
+install -Dp -m0644 %{SOURCE32} %{buildroot}%{_datadir}/containers/storage.conf.d/00-vendor.conf
+install -Dp -m0644 %{SOURCE33} %{buildroot}%{_datadir}/containers/storage.rootful.conf.d/00-vendor-rootful.conf
+install -Dp -m0644 %{SOURCE35} %{buildroot}%{_datadir}/containers/storage.rootless.conf.d/00-vendor-rootless.conf
+install -Dp -m0644 %{SOURCE34} %{buildroot}%{_datadir}/containers/registries.conf.d/00-vendor.conf
 
 # for containers-common
 install -dp %{buildroot}%{_mandir}/man5
@@ -126,7 +141,7 @@ go-md2man -in %{SOURCE11} -out %{buildroot}%{_mandir}/man5/containers-certs.d.5
 go-md2man -in %{SOURCE12} -out %{buildroot}%{_mandir}/man5/containers-registries.d.5
 go-md2man -in %{SOURCE14} -out %{buildroot}%{_mandir}/man5/containers.conf.5
 go-md2man -in %{SOURCE15} -out %{buildroot}%{_mandir}/man5/containers-auth.json.5
-go-md2man -in %{SOURCE16} -out %{buildroot}%{_mandir}/man5/containers-registries.conf.d.5
+install -m0644 %{SOURCE16} %{buildroot}%{_mandir}/man5/containers-registries.conf.d.5
 go-md2man -in %{SOURCE18} -out %{buildroot}%{_mandir}/man5/oci-hooks.5
 go-md2man -in %{SOURCE26} -out %{buildroot}%{_mandir}/man5/Containerfile.5
 go-md2man -in %{SOURCE27} -out %{buildroot}%{_mandir}/man5/containerignore.5
@@ -154,9 +169,28 @@ ln -s ../../../..%{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/
 # Placeholder check to silence rpmlint
 %check
 
+%posttrans
+  # Restore user-modified config files from .rpmsave
+  for file in \
+      policy.json \
+      registries.conf \
+      registries.conf.d/000-shortnames.conf \
+      registries.conf.d/001-rhel-shortnames.conf \
+      registries.conf.d/002-rhel-shortnames-overrides.conf \
+      registries.d/default.yaml \
+      registries.d/registry.redhat.io.yaml \
+      registries.d/registry.access.redhat.com.yaml
+  do
+      file="%{_sysconfdir}/containers/${file}"
+      if [ -f "${file}.rpmsave" ]; then
+          mv "${file}.rpmsave" "${file}"
+      fi
+  done
+
 %files
 %dir %{_sysconfdir}/containers
 %dir %{_sysconfdir}/containers/certs.d
+%dir %{_sysconfdir}/containers/networks
 %dir %{_sysconfdir}/containers/oci
 %dir %{_sysconfdir}/containers/oci/hooks.d
 %dir %{_sysconfdir}/containers/registries.conf.d
@@ -169,27 +203,45 @@ ln -s ../../../..%{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/
 %{_prefix}/lib/containers/storage/overlay-images/images.lock
 %{_prefix}/lib/containers/storage/overlay-layers/layers.lock
 
-%config(noreplace) %{_sysconfdir}/containers/policy.json
-%config(noreplace) %{_sysconfdir}/containers/registries.conf
-%config(noreplace) %{_sysconfdir}/containers/registries.conf.d/*.conf
 %if 0%{?fedora} || 0%{?centos}
 %{_sysconfdir}/pki/sigstore/REKOR-signing-key
 %{_sysconfdir}/pki/sigstore/SIGSTORE-redhat-release3
 %endif
-%config(noreplace) %{_sysconfdir}/containers/registries.d/default.yaml
-%config(noreplace) %{_sysconfdir}/containers/registries.d/registry.redhat.io.yaml
-%config(noreplace) %{_sysconfdir}/containers/registries.d/registry.access.redhat.com.yaml
 %ghost %{_sysconfdir}/containers/storage.conf
 %ghost %{_sysconfdir}/containers/containers.conf
 %dir %{_sharedstatedir}/containers/sigstore
-%{_mandir}/man5/.*.5.gz
-%{_mandir}/man5/*.5.gz
+%{_mandir}/man5/Containerfile.5.gz
+%{_mandir}/man5/containerignore.5.gz
+%{_mandir}/man5/.containerignore.5.gz
+%{_mandir}/man5/containers*.5.gz
+%{_mandir}/man5/oci-hooks.5.gz
 %dir %{_datadir}/containers
 %dir %{_datadir}/containers/systemd
 %{_datadir}/containers/storage.conf
 %{_datadir}/containers/containers.conf
 %{_datadir}/containers/mounts.conf
 %{_datadir}/containers/seccomp.json
+%{_datadir}/containers/policy.json
+%{_datadir}/containers/registries.conf
+%dir %{_datadir}/containers/registries.conf.d
+%{_datadir}/containers/registries.conf.d/000-shortnames.conf
+%if 0%{?fedora} == 0 && 0%{?centos} == 0
+%{_datadir}/containers/registries.conf.d/001-rhel-shortnames.conf
+%{_datadir}/containers/registries.conf.d/002-rhel-shortnames-overrides.conf
+%endif
+%{_datadir}/containers/registries.conf.d/00-vendor.conf
+%dir %{_datadir}/containers/registries.d
+%{_datadir}/containers/registries.d/default.yaml
+%{_datadir}/containers/registries.d/registry.redhat.io.yaml
+%{_datadir}/containers/registries.d/registry.access.redhat.com.yaml
+%dir %{_datadir}/containers/containers.conf.d
+%{_datadir}/containers/containers.conf.d/00-vendor.conf
+%dir %{_datadir}/containers/storage.conf.d
+%{_datadir}/containers/storage.conf.d/00-vendor.conf
+%dir %{_datadir}/containers/storage.rootful.conf.d
+%{_datadir}/containers/storage.rootful.conf.d/00-vendor-rootful.conf
+%dir %{_datadir}/containers/storage.rootless.conf.d
+%{_datadir}/containers/storage.rootless.conf.d/00-vendor-rootless.conf
 %dir %{_datadir}/rhel
 %dir %{_datadir}/rhel/secrets
 %{_datadir}/rhel/secrets/*
@@ -197,6 +249,28 @@ ln -s ../../../..%{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/
 %files extra
 
 %changelog
+* Wed Aug 19 2026 Jindrich Novy <jnovy@redhat.com> - 6:6.0-3
+- Drop ineffective Obsoletes for containernetworking-plugins (RHEL-212289)
+
+* Thu Jul 02 2026 Jindrich Novy <jnovy@redhat.com> - 6:6.0-2
+- fix broken rootless storage.conf mount option (metacopy=on conflicts with
+  userxattr) - split storage vendor config into separate rootful and rootless
+  drop-in files - Resolves: RHEL-191669
+
+* Fri Jun 26 2026 Jindrich Novy <jnovy@redhat.com> - 6:6.0-1
+- bump to container_libs_branch podman-6.0
+- use RHEL-specific mounts.conf from common/contrib/redhat/ (container-libs#842)
+- move config files from /etc/containers to /usr/share/containers (vendor defaults)
+- add vendor drop-in configs for containers.conf, storage.conf and registries.conf
+- add %%posttrans scriptlet to preserve user config on upgrade
+- add Conflicts: podman < 5:6, buildah < 2:1.44, skopeo < 1:1.23
+- own /etc/containers/networks directory
+- Resolves: RHEL-189270
+
+* Thu May 28 2026 Jindrich Novy <jnovy@redhat.com> - 6:5.8-3
+- Enable tier0 gating tests
+- Resolves: RHEL-179776
+
 * Sat Feb 14 2026 Jindrich Novy <jnovy@redhat.com> - 6:5.8-2
 - Convert to unified source - container-libs
 - Related: RHEL-111917

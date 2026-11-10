@@ -28,9 +28,12 @@ for FILE in *; do
     exit 1
   fi
 done
-ensure storage.conf    driver                        \"overlay\"
-ensure storage.conf    mountopt                      \"nodev,metacopy=on\"
-ensure registries.conf unqualified-search-registries [\"registry.access.redhat.com\",\ \"registry.redhat.io\",\ \"docker.io\"]
+# The following settings are now handled by vendor drop-in config files:
+# 00-storage.conf sets driver, 00-storage-rootful.conf / 00-storage-rootless.conf
+# set mountopt, and 00-rhel-registries.conf sets unqualified-search-registries.
+#ensure storage.conf    driver                        \"overlay\"
+#ensure storage.conf    mountopt                      \"nodev,metacopy=on\"
+#ensure registries.conf unqualified-search-registries [\"registry.access.redhat.com\",\ \"registry.redhat.io\",\ \"docker.io\"]
 
 if pwd | grep -e rhel-8 -e c8s > /dev/null
 then
@@ -58,9 +61,12 @@ ensure containers.conf runtime                       \"crun\"
 
 elif pwd | grep -e rhel-10 -e c10s > /dev/null
 then
-ensure registries.conf short-name-mode               \"enforcing\"
-ensure containers.conf runtime                       \"crun\"
-ensure storage.conf    enable_partial_images         \"false\"
+# These settings are now handled by vendor drop-in config files:
+# 00-rhel-registries.conf sets short-name-mode, 00-containers.conf sets runtime,
+# and enable_partial_images upstream default is already "false".
+#ensure registries.conf short-name-mode               \"enforcing\"
+#ensure containers.conf runtime                       \"crun\"
+#ensure storage.conf    enable_partial_images         \"false\"
 else
 echo "Unknown release"
 fi
