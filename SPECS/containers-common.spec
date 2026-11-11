@@ -6,16 +6,14 @@
 
 # Packit will automatically update the image and storage versions on Fedora and
 # CentOS Stream dist-git PRs.
-%global container_libs_branch main
-%global container_libs_url https://raw.githubusercontent.com/containers/container-libs/refs/heads/%{container_libs_branch}
-
-%global container_libs_version 6.0
-#%%global container_libs_version %(v=%{container_libs_branch}; echo ${v:7})
+%global container_libs_version 6.1
+%global container_libs_branch v%{container_libs_version}-rhel
+%global container_libs_url https://gitlab.cee.redhat.com/sustaining-engineering/container-tools/src-git/container-libs/-/raw/%{container_libs_branch}
 
 Name: containers-common
 Epoch: 6
 Version: %{container_libs_version}
-Release: 3%{?dist}
+Release: 2%{?dist}
 License: Apache-2.0
 BuildArch: noarch
 # for BuildRequires: go-md2man
@@ -35,7 +33,7 @@ Conflicts: skopeo < 1:1.23
 Requires: /etc/pki/sigstore/REKOR-signing-key
 Requires: /etc/pki/sigstore/SIGSTORE-redhat-release3
 %endif
-URL: https://github.com/containers/container-libs/
+URL: https://gitlab.cee.redhat.com/sustaining-engineering/container-tools/src-git/container-libs/
 Source1: %{container_libs_url}/storage/storage.conf
 Source2: %{container_libs_url}/storage/docs/containers-storage.conf.5.md
 Source3: %{container_libs_url}/common/contrib/redhat/mounts.conf
@@ -249,6 +247,15 @@ ln -s ../../../..%{_sysconfdir}/yum.repos.d/redhat.repo %{buildroot}%{_datadir}/
 %files extra
 
 %changelog
+* Thu Sep 17 2026 Jindrich Novy <jnovy@redhat.com> - 6:6.1-2
+- update upstream configuration and documentation files via update.sh
+- Related: RHEL-257933
+
+* Thu Sep 17 2026 Jindrich Novy <jnovy@redhat.com> - 6:6.1-1
+- switch container-libs source to internal GitLab v6.1-rhel branch
+- remove log_driver override from vendor containers.conf drop-in
+- Resolves: RHEL-257933
+
 * Wed Aug 19 2026 Jindrich Novy <jnovy@redhat.com> - 6:6.0-3
 - Drop ineffective Obsoletes for containernetworking-plugins (RHEL-212289)
 

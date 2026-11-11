@@ -418,7 +418,6 @@
 				"signalfd4",
 				"sigprocmask",
 				"sigreturn",
-				"socket",
 				"socketcall",
 				"socketpair",
 				"splice",
